@@ -24,8 +24,8 @@ export default function SuccessView({ pedido, onReset }: SuccessViewProps) {
   const customMessage = `Olá Dona Cleusa! Acabei de enviar um pedido pelo aplicativo:
 *Código:* ${pedido.codigo}
 *Cliente:* ${pedido.clienteNome}
-*Massa:* ${pedido.massa === 'preta' ? 'Preta (Chocolate) 🍫' : 'Branca 🍞'}
-*Recheio(s):* ${pedido.saborNome}
+${pedido.massa ? `*Massa:* ${pedido.massa === 'preta' ? 'Preta (Chocolate) 🍫' : 'Branca 🍞'}` : ''}
+*Recheio/Bolo:* ${pedido.saborNome}
 *Tamanho:* ${pedido.tamanhoLabel}
 *Entrega:* ${pedido.tipoEntrega === 'entrega' ? '🚚 Entrega' : '🏪 Retirada'}
 *Pagamento:* ${pedido.formaPagamento === 'pix' ? '📱 Pix (Chave: +5512988275469)' : pedido.formaPagamento === 'cartao' ? '💳 Cartão na maquininha' : '💵 Dinheiro'}

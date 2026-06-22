@@ -19,8 +19,8 @@ import {
 } from 'lucide-react';
 
 // Static assets and default structures
-import { BoloSabor, BoloTamanho, AdicionalExtra, Pedido } from './types';
-import { INITIAL_FLAVORS, INITIAL_SIZES, INITIAL_EXTRAS, INITIAL_ORDERS } from './initialData';
+import { BoloSabor, BoloTamanho, AdicionalExtra, Pedido, BoloSalgadoTamanho, BoloPiscinaSabor } from './types';
+import { INITIAL_FLAVORS, INITIAL_SIZES, INITIAL_EXTRAS, INITIAL_ORDERS, INITIAL_SALGADO_SIZES, INITIAL_PISCINA_SABORES, INITIAL_PISCINA_PRECO } from './initialData';
 
 // Modular Component files
 import OrderForm from './components/OrderForm';
@@ -28,6 +28,7 @@ import SuccessView from './components/SuccessView';
 import AgendaView from './components/AgendaView';
 import LoginView from './components/LoginView';
 import ConfigView from './components/ConfigView';
+import OfficialMenu from './components/OfficialMenu';
 import CleusaLogo from './components/CleusaLogo';
 
 export default function App() {
@@ -45,6 +46,21 @@ export default function App() {
   const [tamanhos, setTamanhos] = useState<BoloTamanho[]>(() => {
     const local = localStorage.getItem('cleusabolos_tamanhos');
     return local ? JSON.parse(local) : INITIAL_SIZES;
+  });
+
+  const [tamanhosSalgado, setTamanhosSalgado] = useState<BoloSalgadoTamanho[]>(() => {
+    const local = localStorage.getItem('cleusabolos_tamanhos_salgado');
+    return local ? JSON.parse(local) : INITIAL_SALGADO_SIZES;
+  });
+
+  const [saboresPiscina, setSaboresPiscina] = useState<BoloPiscinaSabor[]>(() => {
+    const local = localStorage.getItem('cleusabolos_sabores_piscina');
+    return local ? JSON.parse(local) : INITIAL_PISCINA_SABORES;
+  });
+
+  const [precoPiscina, setPrecoPiscina] = useState<number>(() => {
+    const local = localStorage.getItem('cleusabolos_preco_piscina');
+    return local ? parseFloat(local) : INITIAL_PISCINA_PRECO;
   });
 
   const [pedidos, setPedidos] = useState<Pedido[]>(() => {
@@ -76,6 +92,25 @@ export default function App() {
     return local ? parseFloat(local) : 15.00;
   });
 
+  // Fee for special fillings like KitKat, Nutella, Alpino, Nozes
+  const [taxaSaborEspecial, setTaxaSaborEspecial] = useState<number>(() => {
+    const local = localStorage.getItem('cleusabolos_taxa_sabor_especial');
+    return local ? parseFloat(local) : 20.00;
+  });
+
+  // Type cover images for client dynamic customization
+  const [imagemBoloDoce, setImagemBoloDoce] = useState<string>(() => {
+    return localStorage.getItem('cleusabolos_img_bolo_doce') || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800&auto=format&fit=crop&q=80';
+  });
+
+  const [imagemBoloSalgado, setImagemBoloSalgado] = useState<string>(() => {
+    return localStorage.getItem('cleusabolos_img_bolo_salgado') || 'https://images.unsplash.com/photo-1619860860774-1e2e17343432?w=800&auto=format&fit=crop&q=80';
+  });
+
+  const [imagemBoloPiscina, setImagemBoloPiscina] = useState<string>(() => {
+    return localStorage.getItem('cleusabolos_img_bolo_piscina') || 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=800&auto=format&fit=crop&q=80';
+  });
+
   // 3. Keep local storage in sync
   useEffect(() => {
     localStorage.setItem('cleusabolos_sabores', JSON.stringify(sabores));
@@ -101,9 +136,58 @@ export default function App() {
     localStorage.setItem('cleusabolos_taxa_dois_recheios', taxaDoisRecheios.toString());
   }, [taxaDoisRecheios]);
 
+  useEffect(() => {
+    localStorage.setItem('cleusabolos_taxa_sabor_especial', taxaSaborEspecial.toString());
+  }, [taxaSaborEspecial]);
+
+  useEffect(() => {
+    localStorage.setItem('cleusabolos_tamanhos_salgado', JSON.stringify(tamanhosSalgado));
+  }, [tamanhosSalgado]);
+
+  useEffect(() => {
+    localStorage.setItem('cleusabolos_sabores_piscina', JSON.stringify(saboresPiscina));
+  }, [saboresPiscina]);
+
+  useEffect(() => {
+    localStorage.setItem('cleusabolos_preco_piscina', precoPiscina.toString());
+  }, [precoPiscina]);
+
+  useEffect(() => {
+    localStorage.setItem('cleusabolos_img_bolo_doce', imagemBoloDoce);
+  }, [imagemBoloDoce]);
+
+  useEffect(() => {
+    localStorage.setItem('cleusabolos_img_bolo_salgado', imagemBoloSalgado);
+  }, [imagemBoloSalgado]);
+
+  useEffect(() => {
+    localStorage.setItem('cleusabolos_img_bolo_piscina', imagemBoloPiscina);
+  }, [imagemBoloPiscina]);
+
   // Handle updating a standard cake size dynamically in editor mode
   const handleUpdateTamanho = (tamanhoId: string, updatedFields: Partial<BoloTamanho>) => {
     setTamanhos(prev => prev.map(t => t.id === tamanhoId ? { ...t, ...updatedFields } : t));
+  };
+
+  const handleUpdateTamanhoSalgado = (tamanhoId: string, updatedFields: Partial<BoloSalgadoTamanho>) => {
+    setTamanhosSalgado(prev => prev.map(t => t.id === tamanhoId ? { ...t, ...updatedFields } : t));
+  };
+
+  const handleUpdateSaborPiscina = (saborId: string, updatedFields: Partial<BoloPiscinaSabor>) => {
+    setSaboresPiscina(prev => prev.map(s => s.id === saborId ? { ...s, ...updatedFields } : s));
+  };
+
+  const handleAddSaborPiscina = (nome: string) => {
+    const newSabor: BoloPiscinaSabor = {
+      id: 'pisc-' + Date.now(),
+      nome,
+      status: 'disponivel'
+    };
+    setSaboresPiscina(prev => [...prev, newSabor]);
+  };
+
+  const handleDeleteSaborPiscina = (saborId: string) => {
+    setSaboresPiscina(prev => prev.filter(s => s.id !== saborId));
   };
 
   // Handle placing a new custom order in cake customizer mode
@@ -177,6 +261,10 @@ export default function App() {
     setSabores(updated);
   };
 
+  const handleDeleteSabor = (id: string) => {
+    setSabores(prev => prev.filter(s => s.id !== id));
+  };
+
   const handleAddExtra = (newExtra: AdicionalExtra) => {
     setExtras([...extras, newExtra]);
   };
@@ -191,6 +279,10 @@ export default function App() {
     localStorage.setItem('cleusabolos_extras', JSON.stringify(extras));
     localStorage.setItem('cleusabolos_tamanhos', JSON.stringify(tamanhos));
     localStorage.setItem('cleusabolos_taxa_dois_recheios', taxaDoisRecheios.toString());
+    localStorage.setItem('cleusabolos_taxa_sabor_especial', taxaSaborEspecial.toString());
+    localStorage.setItem('cleusabolos_img_bolo_doce', imagemBoloDoce);
+    localStorage.setItem('cleusabolos_img_bolo_salgado', imagemBoloSalgado);
+    localStorage.setItem('cleusabolos_img_bolo_piscina', imagemBoloPiscina);
   };
 
   const handleAdminLogout = () => {
@@ -304,12 +396,27 @@ export default function App() {
                     </p>
                   </div>
 
+                  <OfficialMenu
+                    sabores={sabores}
+                    tamanhos={tamanhos}
+                    tamanhosSalgado={tamanhosSalgado}
+                    saboresPiscina={saboresPiscina}
+                    precoPiscina={precoPiscina}
+                  />
+
                   <OrderForm
                     sabores={sabores}
                     tamanhos={tamanhos}
                     extras={extras}
                     onPlaceOrder={handlePlaceOrder}
                     taxaDoisRecheios={taxaDoisRecheios}
+                    taxaSaborEspecial={taxaSaborEspecial}
+                    tamanhosSalgado={tamanhosSalgado}
+                    saboresPiscina={saboresPiscina}
+                    precoPiscina={precoPiscina}
+                    imagemBoloDoce={imagemBoloDoce}
+                    imagemBoloSalgado={imagemBoloSalgado}
+                    imagemBoloPiscina={imagemBoloPiscina}
                   />
                 </div>
               )}
@@ -562,6 +669,7 @@ export default function App() {
                     extras={extras}
                     onAddSabor={handleAddSabor}
                     onUpdateSabor={handleUpdateSabor}
+                    onDeleteSabor={handleDeleteSabor}
                     onUpdateTamanho={handleUpdateTamanho}
                     onAddExtra={handleAddExtra}
                     onDeleteExtra={handleDeleteExtra}
@@ -569,6 +677,22 @@ export default function App() {
                     onLogout={handleAdminLogout}
                     taxaDoisRecheios={taxaDoisRecheios}
                     onUpdateTaxaDoisRecheios={setTaxaDoisRecheios}
+                    taxaSaborEspecial={taxaSaborEspecial}
+                    onUpdateTaxaSaborEspecial={setTaxaSaborEspecial}
+                    tamanhosSalgado={tamanhosSalgado}
+                    onUpdateTamanhoSalgado={handleUpdateTamanhoSalgado}
+                    saboresPiscina={saboresPiscina}
+                    onUpdateSaborPiscina={handleUpdateSaborPiscina}
+                    onAddSaborPiscina={handleAddSaborPiscina}
+                    onDeleteSaborPiscina={handleDeleteSaborPiscina}
+                    precoPiscina={precoPiscina}
+                    onUpdatePrecoPiscina={setPrecoPiscina}
+                    imagemBoloDoce={imagemBoloDoce}
+                    imagemBoloSalgado={imagemBoloSalgado}
+                    imagemBoloPiscina={imagemBoloPiscina}
+                    onUpdateImagemBoloDoce={setImagemBoloDoce}
+                    onUpdateImagemBoloSalgado={setImagemBoloSalgado}
+                    onUpdateImagemBoloPiscina={setImagemBoloPiscina}
                   />
                 </div>
               )}

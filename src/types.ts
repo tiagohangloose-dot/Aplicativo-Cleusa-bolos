@@ -7,6 +7,7 @@ export interface BoloSabor {
   imagem: string;
   status: 'disponivel' | 'indisponivel';
   tag?: 'best-seller' | 'sazonal' | 'none';
+  isEspecial?: boolean;
 }
 
 export interface BoloTamanho {
@@ -21,6 +22,19 @@ export interface AdicionalExtra {
   id: string;
   nome: string;
   preco: number;
+}
+
+export interface BoloSalgadoTamanho {
+  id: string;
+  label: string;
+  preco: number;
+  fatias: string;
+}
+
+export interface BoloPiscinaSabor {
+  id: string;
+  nome: string;
+  status: 'disponivel' | 'indisponivel';
 }
 
 export interface Pedido {
@@ -56,4 +70,5 @@ export interface Pedido {
   recheio1Nome?: string;
   recheio2Id?: string;
   recheio2Nome?: string;
+  tipoBolo?: 'doce' | 'salgado' | 'piscina';
 }
