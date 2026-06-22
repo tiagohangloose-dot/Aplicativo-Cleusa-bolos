@@ -283,6 +283,12 @@ export default function AgendaView({
                   </span>
                 </div>
 
+                {ped.massa && (
+                  <div className="text-[10px] text-on-surface-variant font-medium">
+                    🎂 Massa: <span className="font-bold capitalize">{ped.massa === 'preta' ? 'Preta (Chocolate) 🍫' : 'Branca 🍞'}</span>
+                  </div>
+                )}
+
                 {/* Method info (Retirada vs Entrega) and Payment details */}
                 <div className="text-[10px] font-semibold text-on-surface flex flex-wrap gap-1.5 mt-0.5">
                   <span className={`px-2 py-0.5 rounded font-bold uppercase ${
@@ -473,9 +479,17 @@ export default function AgendaView({
                 <span className="text-sm font-semibold">{detailedPedido.clienteNome}</span>
               </p>
               <p>
-                <strong className="text-secondary text-xs uppercase font-sans tracking-wide mr-2 block">Sabor do Bolo:</strong>
-                <span className="text-sm font-semibold">{detailedPedido.saborNome} ({detailedPedido.tamanhoLabel})</span>
+                <strong className="text-secondary text-xs uppercase font-sans tracking-wide mr-2 block">Sabor do Bolo (Recheios):</strong>
+                <span className="text-sm font-semibold text-primary">{detailedPedido.saborNome} ({detailedPedido.tamanhoLabel})</span>
               </p>
+              {detailedPedido.massa && (
+                <p>
+                  <strong className="text-secondary text-xs uppercase font-sans tracking-wide mr-2 block">Massa:</strong>
+                  <span className="text-xs font-semibold capitalize bg-primary/10 text-secondary px-2 py-0.5 rounded-full inline-block">
+                    {detailedPedido.massa === 'preta' ? '🍫 Preta (Chocolate)' : '🍞 Branca'}
+                  </span>
+                </p>
+              )}
               <p>
                 <strong className="text-secondary text-xs uppercase font-sans tracking-wide mr-2 block">WhatsApp de Contato:</strong>
                 <span className="text-xs font-mono">{detailedPedido.whatsapp}</span>
@@ -483,7 +497,7 @@ export default function AgendaView({
               <div className="grid grid-cols-2 gap-2 bg-surface-container rounded-lg p-2.5">
                 <p>
                   <strong className="text-secondary text-[10px] uppercase font-semibold block">Entrega:</strong>
-                  <span className="capitalize text-sm font-medium">{detailedPedido.tipoEntrega}</span>
+                  <span className="capitalize text-sm font-medium">{detailedPedido.tipoEntrega === 'entrega' ? '🚚 Entrega' : '🏪 Retirada'}</span>
                 </p>
                 <p>
                   <strong className="text-secondary text-[10px] uppercase font-semibold block">Data/Hora:</strong>
@@ -492,6 +506,37 @@ export default function AgendaView({
                   </span>
                 </p>
               </div>
+
+              {detailedPedido.tipoEntrega === 'entrega' && detailedPedido.rua && (
+                <div className="bg-surface-container-low p-2.5 border border-outline-variant/15 rounded-lg leading-relaxed text-[11px]">
+                  📍 <strong>Endereço de Entrega:</strong> {detailedPedido.rua}, {detailedPedido.numero} {detailedPedido.complemento ? `- ${detailedPedido.complemento}` : ''} - {detailedPedido.bairro}, {detailedPedido.cidade}/{detailedPedido.estado}
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${detailedPedido.rua}, ${detailedPedido.numero}, ${detailedPedido.bairro}, ${detailedPedido.cidade}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline font-bold mt-1.5 block"
+                  >
+                    🗺️ Traçar rota de entrega no Google Maps
+                  </a>
+                </div>
+              )}
+
+              {detailedPedido.tipoEntrega === 'retirada' && (
+                <div className="bg-surface-container-low p-2.5 border border-outline-variant/15 rounded-lg leading-normal text-[11px] space-y-1">
+                  <p>📍 <strong>Local de Retirada (Dona Cleusa):</strong> Rua Uiramirins, 70, Jardim Uirá, São José dos Campos - SP</p>
+                  {detailedPedido.nomeRetirada && (
+                    <p>👤 <strong>Responsável por Retirar:</strong> <span className="font-semibold text-secondary">{detailedPedido.nomeRetirada}</span></p>
+                  )}
+                  <a
+                    href="https://www.google.com/maps/search/?api=1&query=Rua+Uiramirins,+70,+Jardim+Uir%C3%A1,+S%C3%A3o+Jos%C3%A9+dos+Campos"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline font-bold mt-1.5"
+                  >
+                    🗺️ Ver endereço no Google Maps
+                  </a>
+                </div>
+              )}
 
               {detailedPedido.adicionais.length > 0 && (
                 <div>

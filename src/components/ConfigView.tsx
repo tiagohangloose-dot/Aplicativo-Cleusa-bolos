@@ -11,6 +11,8 @@ interface ConfigViewProps {
   onDeleteExtra: (id: string) => void;
   onSaveAll: () => void;
   onLogout: () => void;
+  taxaDoisRecheios: number;
+  onUpdateTaxaDoisRecheios: (val: number) => void;
 }
 
 // Preset visual links for Dona Cleusa to pick gorgeous cake illustrations easily!
@@ -29,7 +31,9 @@ export default function ConfigView({
   onAddExtra,
   onDeleteExtra,
   onSaveAll,
-  onLogout
+  onLogout,
+  taxaDoisRecheios,
+  onUpdateTaxaDoisRecheios
 }: ConfigViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -127,6 +131,35 @@ export default function ConfigView({
           <SlidersHorizontal className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Taxas da Confeitaria Card */}
+      <section className="p-5 bg-surface-container-lowest rounded-xl shadow-[0px_4px_20px_rgba(75,54,33,0.06)] border border-outline-variant/10 animate-in fade-in duration-300">
+        <div className="flex items-center gap-3 mb-4">
+          <DollarSign className="w-5 h-5 text-primary" />
+          <h3 className="font-label-md text-label-md uppercase tracking-wider text-on-surface-variant font-bold">Taxas da Confeitaria</h3>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+              Valor Adicional para Bolo de 2 Recheios (R$)
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-xs font-semibold">R$</span>
+              <input
+                className="w-full bg-surface-container-low rounded-lg p-3 pl-9 text-xs border border-outline-variant/20 focus:border-primary outline-none font-semibold text-secondary"
+                type="number"
+                step="0.1"
+                value={taxaDoisRecheios}
+                onChange={(e) => onUpdateTaxaDoisRecheios(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+            <p className="text-[10px] text-on-surface-variant/70 mt-1 leading-normal italic">
+              Este valor será adicionado ao preço total do bolo caso o cliente decida montar com 2 sabores de recheio.
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* Cadastrar Novo Sabor Card (Screen 5 Section 1) */}
       <section className="p-5 bg-surface-container-lowest rounded-xl shadow-[0px_4px_20px_rgba(75,54,33,0.06)] border border-outline-variant/10">

@@ -6,15 +6,20 @@ interface LoginViewProps {
 }
 
 export default function LoginView({ onSuccessLogin }: LoginViewProps) {
-  const [email, setEmail] = useState('cleusa@cleusabolos.com.br');
-  const [password, setPassword] = useState('cleusa123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [remember, setRemember] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Frictionless bypass for demo with preloader!
-    onSuccessLogin();
+    if (email.trim() === 'cleusadalmas' && password === 'nota10') {
+      setError(null);
+      onSuccessLogin();
+    } else {
+      setError('Usuário ou senha incorretos! Tente novamente.');
+    }
   };
 
   return (
@@ -41,18 +46,24 @@ export default function LoginView({ onSuccessLogin }: LoginViewProps) {
         {/* Form Section */}
         <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
           
+          {error && (
+            <div className="bg-rose-50 border border-rose-200 text-[#ba1a1a] text-xs font-semibold p-3 rounded-lg text-center leading-normal animate-in fade-in duration-200">
+              ⚠️ {error}
+            </div>
+          )}
+
           {/* Email/User Field */}
           <div className="flex flex-col gap-1.5">
             <label className="font-label-md text-xs text-on-surface-variant flex items-center gap-1.5" htmlFor="username">
               <User className="w-4 h-4 text-secondary" />
-              <span>Usuário ou E-mail</span>
+              <span>Usuário</span>
             </label>
             <input
               id="username"
-              type="email"
+              type="text"
               required
               className="w-full h-11 px-4 rounded-lg bg-surface-container-low border border-outline-variant/30 text-on-surface font-sans text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all placeholder:text-outline/40"
-              placeholder="exemplo@cleusabolos.com.br"
+              placeholder="Digite o usuário de acesso"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -65,13 +76,6 @@ export default function LoginView({ onSuccessLogin }: LoginViewProps) {
                 <Lock className="w-4 h-4 text-secondary" />
                 <span>Senha</span>
               </label>
-              <button
-                type="button"
-                className="font-sans text-[11px] font-semibold text-primary hover:underline transition-all cursor-pointer"
-                onClick={() => alert('Pode acessar diretamente! Suas credenciais já estão salvas para demonstração.')}
-              >
-                Esqueci minha senha
-              </button>
             </div>
             
             <div className="relative flex items-center">
@@ -107,11 +111,6 @@ export default function LoginView({ onSuccessLogin }: LoginViewProps) {
               Manter conectado
             </label>
           </div>
-
-          {/* Guide hint info */}
-          <p className="text-[10px] text-center italic text-tertiary font-sans mb-1">
-            * Credenciais de simulação prontas! Basta clicar em "Acessar Painel".
-          </p>
 
           {/* Submit Button */}
           <button

@@ -50,4 +50,10 @@ export interface Pedido {
   status: 'pendente' | 'producao' | 'entregue';
   dataCriacao: string;
   detalhes?: string;
+  massa?: 'branca' | 'preta';
+  quantidadeRecheios?: 1 | 2;
+  recheio1Id?: string;
+  recheio1Nome?: string;
+  recheio2Id?: string;
+  recheio2Nome?: string;
 }

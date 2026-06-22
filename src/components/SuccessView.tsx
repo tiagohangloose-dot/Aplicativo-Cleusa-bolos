@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pedido } from '../types';
 import Confetti from './Confetti';
 import { CheckCircle, ArrowLeft, Send, Home, Info, ExternalLink } from 'lucide-react';
+import CleusaLogo from './CleusaLogo';
 
 interface SuccessViewProps {
   pedido: Pedido;
@@ -23,18 +24,19 @@ export default function SuccessView({ pedido, onReset }: SuccessViewProps) {
   const customMessage = `Olá Dona Cleusa! Acabei de enviar um pedido pelo aplicativo:
 *Código:* ${pedido.codigo}
 *Cliente:* ${pedido.clienteNome}
-*Sabor:* ${pedido.saborNome}
+*Massa:* ${pedido.massa === 'preta' ? 'Preta (Chocolate) 🍫' : 'Branca 🍞'}
+*Recheio(s):* ${pedido.saborNome}
 *Tamanho:* ${pedido.tamanhoLabel}
 *Entrega:* ${pedido.tipoEntrega === 'entrega' ? '🚚 Entrega' : '🏪 Retirada'}
-*Pagamento:* ${pedido.formaPagamento === 'pix' ? '📱 Pix (Chave: 12988275469)' : pedido.formaPagamento === 'cartao' ? '💳 Cartão na maquininha' : '💵 Dinheiro'}
+*Pagamento:* ${pedido.formaPagamento === 'pix' ? '📱 Pix (Chave: +5512988275469)' : pedido.formaPagamento === 'cartao' ? '💳 Cartão na maquininha' : '💵 Dinheiro'}
 *Data/Hora:* ${new Date(pedido.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} às ${pedido.horario}
 *Total:* R$ ${pedido.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
 *Detalhes:* ${pedido.detalhes || 'Nenhum'}`;
 
   // Generate Pix Static Payload function
   const generatePixCopyPaste = (amount: number) => {
-    const key = "5512988275469"; // Celular formatado com DDI e DDD
-    const merchantName = "CLEUSA BOLOS";
+    const key = "+5512988275469"; // Celular formatado no padrão internacional com +55 exigido pelo Banco Central
+    const merchantName = "CLEUSA DALMAS COSTA";
     const merchantCity = "SAO JOSE DOS CAMPOS";
     
     const formatPart = (id: number, value: string) => {
@@ -108,16 +110,17 @@ export default function SuccessView({ pedido, onReset }: SuccessViewProps) {
         </div>
       )}
 
-      {/* Success Hero Title */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-secondary-container text-secondary mb-4 shadow-[0px_4px_20px_rgba(115,87,91,0.1)]">
-          <CheckCircle className="w-12 h-12 text-tertiary" />
+      {/* Success Hero Title with Cleusa Logo */}
+      <div className="text-center mb-8 flex flex-col items-center">
+        <CleusaLogo variant="vertical" size="sm" className="mb-4" />
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-secondary-container text-secondary mb-3 shadow-[0px_4px_15px_rgba(97,21,42,0.1)]">
+          <CheckCircle className="w-8 h-8 text-secondary" />
         </div>
-        <h2 className="font-serif text-3xl md:text-4xl text-secondary font-bold tracking-tight mb-2">
-          Pedido Confirmado!
+        <h2 className="font-serif text-2xl md:text-3xl text-secondary font-bold tracking-tight mb-2">
+          Pedido Recebido!
         </h2>
-        <p className="font-sans text-body-lg text-on-surface-variant max-w-md mx-auto">
-          Obrigado pelo seu pedido. Ele já está sendo preparado com todo o carinho e ingredientes selecionados da Dona Cleusa.
+        <p className="font-sans text-xs text-on-surface-variant max-w-sm mx-auto leading-relaxed">
+          Obrigado pelo seu pedido. Ele já foi registrado na nossa agenda e está pronto para ser enviado por você pelo WhatsApp para a Dona Cleusa.
         </p>
       </div>
 
@@ -136,9 +139,18 @@ export default function SuccessView({ pedido, onReset }: SuccessViewProps) {
           </div>
 
           <div className="flex justify-between items-center py-1 border-b border-outline-variant/5">
-            <span className="text-on-surface-variant text-sm">Sabor</span>
+            <span className="text-on-surface-variant text-sm">Sabor (Recheio)</span>
             <span className="font-label-md text-on-surface text-right font-semibold">{pedido.saborNome}</span>
           </div>
+
+          {pedido.massa && (
+            <div className="flex justify-between items-center py-1 border-b border-outline-variant/5">
+              <span className="text-on-surface-variant text-sm">Massa do Bolo</span>
+              <span className="font-label-md text-on-surface font-semibold capitalize">
+                {pedido.massa === 'preta' ? '🍫 Preta (Chocolate)' : '🍞 Branca'}
+              </span>
+            </div>
+          )}
 
           <div className="flex justify-between items-center py-1 border-b border-outline-variant/5">
             <span className="text-on-surface-variant text-sm">Tamanho</span>

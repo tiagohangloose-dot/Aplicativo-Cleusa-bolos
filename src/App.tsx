@@ -28,6 +28,7 @@ import SuccessView from './components/SuccessView';
 import AgendaView from './components/AgendaView';
 import LoginView from './components/LoginView';
 import ConfigView from './components/ConfigView';
+import CleusaLogo from './components/CleusaLogo';
 
 export default function App() {
   // 1. Core Databases matching storage specs
@@ -64,6 +65,12 @@ export default function App() {
     return localStorage.getItem('cleusabolos_admin_session') === 'true';
   });
 
+  // Flat fee for cakes that use 2 fillings
+  const [taxaDoisRecheios, setTaxaDoisRecheios] = useState<number>(() => {
+    const local = localStorage.getItem('cleusabolos_taxa_dois_recheios');
+    return local ? parseFloat(local) : 15.00;
+  });
+
   // 3. Keep local storage in sync
   useEffect(() => {
     localStorage.setItem('cleusabolos_sabores', JSON.stringify(sabores));
@@ -80,6 +87,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('cleusabolos_meus_pedidos_ids', JSON.stringify(meusPedidosIds));
   }, [meusPedidosIds]);
+
+  useEffect(() => {
+    localStorage.setItem('cleusabolos_taxa_dois_recheios', taxaDoisRecheios.toString());
+  }, [taxaDoisRecheios]);
 
   // Handle placing a new custom order in cake customizer mode
   const handlePlaceOrder = (newOrderFields: Omit<Pedido, 'id' | 'codigo' | 'dataCriacao'>) => {
@@ -190,9 +201,12 @@ export default function App() {
           >
             <Menu className="w-5 h-5 text-secondary" />
           </button>
-          <h1 className="font-serif italic text-xl md:text-2xl font-bold text-primary cursor-pointer select-none" onClick={() => { setLastPlacedOrder(null); setActiveTab('menu'); }}>
-            Cleusa Bolos
-          </h1>
+          <button 
+            onClick={() => { setLastPlacedOrder(null); setActiveTab('menu'); }}
+            className="cursor-pointer transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <CleusaLogo variant="horizontal" />
+          </button>
         </div>
 
         {/* Right Header Controls */}
@@ -257,12 +271,20 @@ export default function App() {
               ) : (
                 // Customize cake screen 1
                 <div>
+                  {/* Beautiful centered branding logo card replicating her official image */}
+                  <div className="flex flex-col items-center justify-center py-6 px-4 bg-surface-container-lowest rounded-2xl border border-outline-variant/15 shadow-[0px_8px_35px_rgba(97,21,42,0.05)] mb-6 animate-in fade-in slide-in-from-top-3 duration-500">
+                    <CleusaLogo variant="vertical" size="md" />
+                    <p className="font-sans text-xs text-on-surface-variant/85 max-w-xs mt-3 text-center leading-relaxed">
+                      Delícias artesanais feitas à mão com muito carinho e ingredientes selecionados.
+                    </p>
+                  </div>
+
                   <div className="mb-6">
-                    <h2 className="font-serif text-3xl md:text-4xl text-secondary font-bold tracking-tight mb-2 italic">
+                    <h2 className="font-serif text-2xl text-secondary font-bold tracking-tight mb-1 italic">
                       Monte seu Bolo
                     </h2>
-                    <p className="font-sans text-xs md:text-sm text-on-surface-variant leading-relaxed">
-                      Crie momentos inesquecíveis com nossos bolos artesanais, feitos com ingredientes selecionados e muito amor.
+                    <p className="font-sans text-xs text-on-surface-variant leading-relaxed">
+                      Personalize os sabores e adicionais abaixo para gerar sua encomenda instantânea.
                     </p>
                   </div>
 
@@ -271,6 +293,7 @@ export default function App() {
                     tamanhos={INITIAL_SIZES}
                     extras={extras}
                     onPlaceOrder={handlePlaceOrder}
+                    taxaDoisRecheios={taxaDoisRecheios}
                   />
                 </div>
               )}
@@ -389,8 +412,21 @@ export default function App() {
                             <p><strong>Agendamento:</strong> {new Date(ped.data + 'T12:00:00').toLocaleDateString('pt-BR')} às {ped.horario}</p>
                             <p><strong>Tipo de Encomenda:</strong> {ped.tipoEntrega === 'entrega' ? '🚚 Receber em Casa' : '🏪 Buscar com a Cleusa'}</p>
                             <p><strong>Forma de Pagamento:</strong> <span className="font-semibold text-secondary uppercase text-[11px]">{ped.formaPagamento === 'pix' ? '📱 Pix' : ped.formaPagamento === 'cartao' ? '💳 Cartão' : '💵 Dinheiro'}</span></p>
-                            {ped.tipoEntrega === 'retirada' && ped.nomeRetirada && (
-                              <p><strong>Retirada por:</strong> <span className="font-semibold text-secondary">{ped.nomeRetirada}</span></p>
+                            {ped.tipoEntrega === 'retirada' && (
+                              <div className="bg-white/50 p-2.5 rounded border border-outline-variant/10 text-[11px] mt-1.5 leading-normal">
+                                <p>📍 <strong>Local de Retirada:</strong> Rua Uiramirins, 70, Jardim Uirá, São José dos Campos - SP</p>
+                                {ped.nomeRetirada && (
+                                  <p className="mt-1">👤 <strong>Responsável pela retirada:</strong> <span className="font-semibold text-secondary">{ped.nomeRetirada}</span></p>
+                                )}
+                                <a
+                                  href="https://www.google.com/maps/search/?api=1&query=Rua+Uiramirins,+70,+Jardim+Uir%C3%A1,+S%C3%A3o+Jos%C3%A9+dos+Campos"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 text-[10px] text-primary hover:underline font-bold mt-1.5"
+                                >
+                                  🗺️ Como chegar no Google Maps
+                                </a>
+                              </div>
                             )}
                             {ped.tipoEntrega === 'entrega' && ped.rua && (
                               <p className="bg-white/50 p-2 rounded border border-outline-variant/10 text-[11px] mt-1.5 leading-normal">
@@ -513,6 +549,8 @@ export default function App() {
                     onDeleteExtra={handleDeleteExtra}
                     onSaveAll={handleSaveAllConfig}
                     onLogout={handleAdminLogout}
+                    taxaDoisRecheios={taxaDoisRecheios}
+                    onUpdateTaxaDoisRecheios={setTaxaDoisRecheios}
                   />
                 </div>
               )}

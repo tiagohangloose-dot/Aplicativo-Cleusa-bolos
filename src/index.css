@@ -5,30 +5,30 @@
   --font-serif: "Playfair Display", Georgia, serif;
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   
-  --color-surface: #fff9ee;
-  --color-surface-dim: #e0d9cc;
-  --color-surface-bright: #fff9ee;
+  --color-surface: #fff0f2;
+  --color-surface-dim: #ebd4d6;
+  --color-surface-bright: #fff0f2;
   --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #faf3e5;
-  --color-surface-container: #f4eddf;
-  --color-surface-container-high: #eee8da;
-  --color-surface-container-highest: #e8e2d4;
-  --color-on-surface: #1e1b13;
-  --color-on-surface-variant: #4f4445;
-  --color-inverse-surface: #333027;
-  --color-inverse-on-surface: #f7f0e2;
-  --color-outline: #817475;
-  --color-outline-variant: #d2c3c4;
-  --color-surface-tint: #73575b;
-  --color-primary: #73575b;
+  --color-surface-container-low: #fef1f3;
+  --color-surface-container: #fce5e8;
+  --color-surface-container-high: #fcdbdc;
+  --color-surface-container-highest: #facfcf;
+  --color-on-surface: #2d181c;
+  --color-on-surface-variant: #614a4d;
+  --color-inverse-surface: #403032;
+  --color-inverse-on-surface: #fff0f1;
+  --color-outline: #ab8140;
+  --color-outline-variant: #e0ced0;
+  --color-surface-tint: #61152a;
+  --color-primary: #61152a;
   --color-on-primary: #ffffff;
-  --color-primary-container: #f4d0d4;
-  --color-on-primary-container: #72575b;
-  --color-inverse-primary: #e1bec2;
-  --color-secondary: #725a42;
+  --color-primary-container: #fcdbdc;
+  --color-on-primary-container: #61152a;
+  --color-inverse-primary: #e6b2b7;
+  --color-secondary: #ab8140;
   --color-on-secondary: #ffffff;
-  --color-secondary-container: #fedcbe;
-  --color-on-secondary-container: #796048;
+  --color-secondary-container: #feeecf;
+  --color-on-secondary-container: #ab8140;
   --color-tertiary: #85530b;
   --color-on-tertiary: #ffffff;
   --color-tertiary-container: #ffd09e;
@@ -38,15 +38,15 @@
 }
 
 body {
-  background-color: #fff9ee;
-  color: #1e1b13;
+  background-color: #fff0f2;
+  color: #2d181c;
   font-family: var(--font-sans);
 }
 
 /* Custom subtle background pattern */
 .bg-pattern {
-  background-color: #fff9ee;
-  background-image: radial-gradient(#725a42 0.5px, transparent 0.5px), radial-gradient(#725a42 0.5px, #fff9ee 0.5px);
+  background-color: #fff0f2;
+  background-image: radial-gradient(#ab8140 0.5px, transparent 0.5px), radial-gradient(#ab8140 0.5px, #fff0f2 0.5px);
   background-size: 20px 20px;
   background-position: 0 0, 10px 10px;
   opacity: 0.05;

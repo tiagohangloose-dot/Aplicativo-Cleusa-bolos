@@ -7,9 +7,10 @@ interface OrderFormProps {
   tamanhos: BoloTamanho[];
   extras: AdicionalExtra[];
   onPlaceOrder: (pedido: Omit<Pedido, 'id' | 'codigo' | 'dataCriacao'>) => void;
+  taxaDoisRecheios: number;
 }
 
-export default function OrderForm({ sabores, tamanhos, extras, onPlaceOrder }: OrderFormProps) {
+export default function OrderForm({ sabores, tamanhos, extras, onPlaceOrder, taxaDoisRecheios }: OrderFormProps) {
   const disponivelSabores = sabores.filter(s => s.status === 'disponivel');
   
   // State variables for form inputs
@@ -20,6 +21,9 @@ export default function OrderForm({ sabores, tamanhos, extras, onPlaceOrder }: O
   const [data, setData] = useState('');
   const [horario, setHorario] = useState('14:00');
   const [saborId, setSaborId] = useState(disponivelSabores[0]?.id || '1');
+  const [recheio2Id, setRecheio2Id] = useState(disponivelSabores[1]?.id || disponivelSabores[0]?.id || '1');
+  const [massa, setMassa] = useState<'branca' | 'preta'>('branca');
+  const [quantidadeRecheios, setQuantidadeRecheios] = useState<1 | 2>(1);
   const [tamanhoId, setTamanhoId] = useState('p');
   const [adicionaisSelecionados, setAdicionaisSelecionados] = useState<string[]>([]);
   const [detalhesVal, setDetalhesVal] = useState('');
@@ -104,7 +108,15 @@ export default function OrderForm({ sabores, tamanhos, extras, onPlaceOrder }: O
   };
 
   // Math calculation
-  const basePreco = selectedSabor ? selectedSabor.precoBase : 0;
+  const recheio1 = sabores.find(s => s.id === saborId) || sabores[0];
+  const recheio2 = quantidadeRecheios === 2 ? (sabores.find(s => s.id === recheio2Id) || sabores[0]) : null;
+
+  // If they choose 2 fillings, we take the highest base price to cover cost, or just recheio1's price. Let's take the highest price.
+  const fillingsBasePreco = recheio2
+    ? Math.max(recheio1?.precoBase || 0, recheio2?.precoBase || 0)
+    : (recheio1?.precoBase || 0);
+
+  const doubleFillingSurcharge = quantidadeRecheios === 2 ? taxaDoisRecheios : 0;
   const tamanhoPreco = selectedTamanho ? selectedTamanho.adicionalPreco : 0;
   
   // Extras calculations
@@ -113,7 +125,7 @@ export default function OrderForm({ sabores, tamanhos, extras, onPlaceOrder }: O
     return sum + (matched ? matched.preco : 0);
   }, 0);
 
-  const total = basePreco + tamanhoPreco + extrasPreco;
+  const total = fillingsBasePreco + doubleFillingSurcharge + tamanhoPreco + extrasPreco;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,6 +164,10 @@ export default function OrderForm({ sabores, tamanhos, extras, onPlaceOrder }: O
       return;
     }
 
+    const finalSaborNome = recheio2
+      ? `${recheio1?.nome || 'Personalizado'} + ${recheio2?.nome || 'Personalizado'}`
+      : (recheio1?.nome || 'Personalizado');
+
     onPlaceOrder({
       clienteNome,
       whatsapp,
@@ -159,15 +175,21 @@ export default function OrderForm({ sabores, tamanhos, extras, onPlaceOrder }: O
       data,
       horario,
       saborId,
-      saborNome: selectedSabor?.nome || 'Personalizado',
+      saborNome: finalSaborNome,
       tamanhoId,
       tamanhoLabel: selectedTamanho?.label || 'P (1kg)',
       adicionais: [...adicionaisSelecionados, ...(detalhesVal ? [detalhesVal] : [])],
-      adicionaisPreco: extrasPreco,
+      adicionaisPreco: extrasPreco + doubleFillingSurcharge,
       total,
       formaPagamento,
       status: 'pendente',
       detalhes: detalhesVal,
+      massa,
+      quantidadeRecheios,
+      recheio1Id: saborId,
+      recheio1Nome: recheio1?.nome,
+      recheio2Id: recheio2 ? recheio2Id : undefined,
+      recheio2Nome: recheio2 ? recheio2.nome : undefined,
       // Add optional delivery location details
       ...(tipoEntrega === 'entrega' ? {
         cep,
@@ -262,8 +284,19 @@ export default function OrderForm({ sabores, tamanhos, extras, onPlaceOrder }: O
 
         {tipoEntrega === 'retirada' && (
           <div className="space-y-4 border-t border-outline-variant/10 pt-4 animate-in fade-in duration-300">
-            <div className="bg-primary-container/20 p-3 rounded-lg text-[11px] text-secondary leading-normal">
-              🏪 O bolo estará quentinho e reservado para retirada direto na nossa Loja da Cleusa!
+            <div className="bg-primary-container/20 p-3 rounded-lg text-[11px] text-secondary leading-normal space-y-1.5">
+              <p>🏪 O bolo estará disponivel e reservado para retirada direto no endereço da Dona Cleusa.</p>
+              <div className="text-[10px] text-on-surface-variant font-medium bg-white/45 p-2 rounded border border-outline-variant/10 leading-normal">
+                📍 <strong>Endereço de Retirada:</strong> Rua Uiramirins, 70, Jardim Uirá, São José dos Campos - SP
+              </div>
+              <a
+                href="https://www.google.com/maps/search/?api=1&query=Rua+Uiramirins,+70,+Jardim+Uir%C3%A1,+S%C3%A3o+Jos%C3%A9+dos+Campos"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline font-bold mt-1.5"
+              >
+                🗺️ Como chegar no Google Maps
+              </a>
             </div>
             <div>
               <label className="block font-label-md text-xs text-on-surface-variant mb-1" htmlFor="nomeRetirada">
@@ -494,26 +527,120 @@ export default function OrderForm({ sabores, tamanhos, extras, onPlaceOrder }: O
         )}
 
         <div className="space-y-4">
+          
+          {/* Escolha a Massa */}
           <div>
-            <label className="block font-label-md text-xs text-on-surface-variant mb-1" htmlFor="sabor">
-              Escolha seu Sabor
+            <label className="block font-label-md text-xs text-on-surface-variant mb-2">
+              Escolha a Massa do Bolo
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setMassa('branca')}
+                className={`py-3 px-2 rounded-xl text-center border transition-all cursor-pointer flex flex-col justify-center items-center ${
+                  massa === 'branca'
+                    ? 'bg-primary-container border-primary text-secondary font-bold shadow-inner'
+                    : 'border-outline-variant/30 bg-surface-container-low/50 text-on-surface-variant hover:bg-surface-container-low'
+                }`}
+              >
+                <span className="font-label-md text-sm">🍞 Massa Branca</span>
+                <span className="text-[10px] mt-0.5 opacity-80">Baunilha tradicional</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMassa('preta')}
+                className={`py-3 px-2 rounded-xl text-center border transition-all cursor-pointer flex flex-col justify-center items-center ${
+                  massa === 'preta'
+                    ? 'bg-primary-container border-primary text-secondary font-bold shadow-inner'
+                    : 'border-outline-variant/30 bg-surface-container-low/50 text-on-surface-variant hover:bg-surface-container-low'
+                }`}
+              >
+                <span className="font-label-md text-sm">🍫 Massa Preta</span>
+                <span className="text-[10px] mt-0.5 opacity-80">Chocolate cacau</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quantidade de Recheios */}
+          <div>
+            <label className="block font-label-md text-xs text-on-surface-variant mb-2">
+              Quantidade de Recheios
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setQuantidadeRecheios(1)}
+                className={`py-3 px-2 rounded-xl text-center border transition-all cursor-pointer flex flex-col justify-center items-center ${
+                  quantidadeRecheios === 1
+                    ? 'bg-primary-container border-primary text-secondary font-bold shadow-inner'
+                    : 'border-outline-variant/30 bg-surface-container-low/50 text-on-surface-variant hover:bg-surface-container-low'
+                }`}
+              >
+                <span className="font-label-md text-sm">1 Recheio</span>
+                <span className="text-[10px] mt-0.5 opacity-80">Sabor único</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setQuantidadeRecheios(2)}
+                className={`py-3 px-2 rounded-xl text-center border transition-all cursor-pointer flex flex-col justify-center items-center ${
+                  quantidadeRecheios === 2
+                    ? 'bg-primary-container border-primary text-secondary font-bold shadow-inner'
+                    : 'border-outline-variant/30 bg-surface-container-low/50 text-on-surface-variant hover:bg-surface-container-low'
+                }`}
+              >
+                <span className="font-label-md text-sm">2 Recheios</span>
+                <span className="text-[10px] mt-0.5 mt-0.5 font-bold text-primary animate-pulse">+ R$ {taxaDoisRecheios.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Primeiro Recheio */}
+          <div>
+            <label className="block font-label-md text-xs text-on-surface-variant mb-1" htmlFor="recheio1">
+              {quantidadeRecheios === 2 ? 'Primeiro Recheio' : 'Escolha seu Recheio (Sabor do Bolo)'}
             </label>
             <select
-              id="sabor"
-              className="w-full h-12 px-4 rounded-lg bg-surface-container-low border border-outline-variant/30 text-on-surface font-body-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              id="recheio1"
+              className="w-full h-12 px-4 rounded-lg bg-surface-container-low border border-outline-variant/30 text-on-surface font-body-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer text-xs font-semibold"
               value={saborId}
               onChange={(e) => setSaborId(e.target.value)}
             >
               {disponivelSabores.map((sab) => (
                 <option key={sab.id} value={sab.id}>
-                  {sab.nome} (Sabor base: R$ {sab.precoBase.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                  {sab.nome} (Base: R$ {sab.precoBase.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
                 </option>
               ))}
             </select>
-            {selectedSabor?.descricao && (
-              <p className="mt-1 text-xs text-on-surface-variant italic font-sans">{selectedSabor.descricao}</p>
+            {recheio1?.descricao && (
+              <p className="mt-1 text-xs text-on-surface-variant italic font-sans">{recheio1.descricao}</p>
             )}
           </div>
+
+          {/* Segundo Recheio (Condicional) */}
+          {quantidadeRecheios === 2 && (
+            <div className="animate-in slide-in-from-top-2 duration-300">
+              <label className="block font-label-md text-xs text-on-surface-variant mb-1" htmlFor="recheio2">
+                Segundo Recheio
+              </label>
+              <select
+                id="recheio2"
+                className="w-full h-12 px-4 rounded-lg bg-surface-container-low border border-outline-variant/30 text-on-surface font-body-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer text-xs font-semibold"
+                value={recheio2Id}
+                onChange={(e) => setRecheio2Id(e.target.value)}
+              >
+                {disponivelSabores.map((sab) => (
+                  <option key={sab.id} value={sab.id}>
+                    {sab.nome} (Base: R$ {sab.precoBase.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                  </option>
+                ))}
+              </select>
+              {sabores.find(s => s.id === recheio2Id)?.descricao && (
+                <p className="mt-1 text-xs text-on-surface-variant italic font-sans">{sabores.find(s => s.id === recheio2Id)?.descricao}</p>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="block font-label-md text-xs text-on-surface-variant mb-2">
@@ -657,9 +784,25 @@ export default function OrderForm({ sabores, tamanhos, extras, onPlaceOrder }: O
 
         <div className="text-xs text-on-surface-variant space-y-1">
           <div className="flex justify-between">
-            <span>Base do Bolo ({selectedSabor?.nome})</span>
-            <span className="font-medium text-on-surface">R$ {basePreco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            <span>Massa do Bolo</span>
+            <span className="font-semibold text-on-surface capitalize">{massa === 'preta' ? 'Preta (Chocolate)' : 'Branca'}</span>
           </div>
+          <div className="flex justify-between">
+            <span>Recheio {quantidadeRecheios === 2 ? '1' : ''} ({recheio1?.nome})</span>
+            <span className="font-medium text-on-surface">R$ {recheio1?.precoBase.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+          </div>
+          {quantidadeRecheios === 2 && recheio2 && (
+            <>
+              <div className="flex justify-between">
+                <span>Recheio 2 ({recheio2?.nome})</span>
+                <span className="font-medium text-on-surface">R$ {recheio2?.precoBase.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between text-primary font-bold">
+                <span>Taxa de Costura de 2 Recheios</span>
+                <span>+R$ {taxaDoisRecheios.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              </div>
+            </>
+          )}
           <div className="flex justify-between">
             <span>Adicional de Tamanho ({selectedTamanho?.label})</span>
             <span className="font-medium text-on-surface">R$ {tamanhoPreco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
