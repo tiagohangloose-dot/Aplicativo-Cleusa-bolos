@@ -1,0 +1,330 @@
+import { useState } from 'react';
+import { Pedido } from '../types';
+import Confetti from './Confetti';
+import { CheckCircle, ArrowLeft, Send, Home, Info, ExternalLink } from 'lucide-react';
+
+interface SuccessViewProps {
+  pedido: Pedido;
+  onReset: () => void;
+}
+
+export default function SuccessView({ pedido, onReset }: SuccessViewProps) {
+  const [showSimulatedMessage, setShowSimulatedMessage] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+
+  const showToast = (message: string) => {
+    setCopyFeedback(message);
+    setTimeout(() => {
+      setCopyFeedback(null);
+    }, 3000);
+  };
+
+  // Generate a beautiful formatted whatsapp message text for Cleusa
+  const customMessage = `Olá Dona Cleusa! Acabei de enviar um pedido pelo aplicativo:
+*Código:* ${pedido.codigo}
+*Cliente:* ${pedido.clienteNome}
+*Sabor:* ${pedido.saborNome}
+*Tamanho:* ${pedido.tamanhoLabel}
+*Entrega:* ${pedido.tipoEntrega === 'entrega' ? '🚚 Entrega' : '🏪 Retirada'}
+*Pagamento:* ${pedido.formaPagamento === 'pix' ? '📱 Pix (Chave: 12988275469)' : pedido.formaPagamento === 'cartao' ? '💳 Cartão na maquininha' : '💵 Dinheiro'}
+*Data/Hora:* ${new Date(pedido.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} às ${pedido.horario}
+*Total:* R$ ${pedido.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+*Detalhes:* ${pedido.detalhes || 'Nenhum'}`;
+
+  // Generate Pix Static Payload function
+  const generatePixCopyPaste = (amount: number) => {
+    const key = "5512988275469"; // Celular formatado com DDI e DDD
+    const merchantName = "CLEUSA BOLOS";
+    const merchantCity = "SAO JOSE DOS CAMPOS";
+    
+    const formatPart = (id: number, value: string) => {
+      const idStr = id.toString().padStart(2, '0');
+      const lenStr = value.length.toString().padStart(2, '0');
+      return `${idStr}${lenStr}${value}`;
+    };
+
+    // ID 26: Merchant Account Info
+    const gui = formatPart(0, 'br.gov.bcb.pix');
+    const chave = formatPart(1, key);
+    const merchantAccountInfo = formatPart(26, `${gui}${chave}`);
+
+    // ID 52: Merchant Category Code
+    const categoryCode = formatPart(52, '0000');
+    // ID 53: Transaction Currency (986 is BRL)
+    const currency = formatPart(53, '986');
+    // ID 54: Transaction Amount
+    const amountStr = amount.toFixed(2);
+    const transactionAmount = formatPart(54, amountStr);
+    // ID 58: Country Code (BR)
+    const countryCode = formatPart(58, 'BR');
+    // ID 59: Merchant Name
+    const merchantNamePart = formatPart(59, merchantName);
+    // ID 60: Merchant City
+    const merchantCityPart = formatPart(60, merchantCity);
+    // ID 62: Additional Data Field Template
+    const txidPart = formatPart(5, '***');
+    const additionalData = formatPart(62, txidPart);
+
+    const payloadWithoutCRC = `000201${merchantAccountInfo}${categoryCode}${currency}${transactionAmount}${countryCode}${merchantNamePart}${merchantCityPart}${additionalData}6304`;
+
+    // Calculate CRC16 CCITT
+    let crc = 0xFFFF;
+    for (let i = 0; i < payloadWithoutCRC.length; i++) {
+      let byte = payloadWithoutCRC.charCodeAt(i);
+      let temp = ((crc >> 8) ^ byte) & 0xFF;
+      temp ^= temp >> 4;
+      crc = ((crc << 8) ^ (temp << 12) ^ (temp << 5) ^ temp) & 0xFFFF;
+    }
+    const crcHex = crc.toString(16).toUpperCase().padStart(4, '0');
+
+    return `${payloadWithoutCRC}${crcHex}`;
+  };
+
+  const handleWhatsAppAction = () => {
+    // Standard URL format
+    const encodedText = encodeURIComponent(customMessage);
+    const url = `https://api.whatsapp.com/send?text=${encodedText}`;
+    
+    // Attempt opening in a secure new tab
+    try {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      console.warn("Iframe blocked direct window.open redirection.", e);
+    }
+    
+    // Open internal beautiful simulator popup as a backup
+    setShowSimulatedMessage(true);
+  };
+
+  return (
+    <div className="relative animate-in fade-in slide-in-from-bottom-2 duration-700">
+      <Confetti />
+
+      {/* Floating Toast notification */}
+      {copyFeedback && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-secondary text-white text-xs font-bold px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 border border-outline/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <span>✨</span>
+          <span>{copyFeedback}</span>
+        </div>
+      )}
+
+      {/* Success Hero Title */}
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-secondary-container text-secondary mb-4 shadow-[0px_4px_20px_rgba(115,87,91,0.1)]">
+          <CheckCircle className="w-12 h-12 text-tertiary" />
+        </div>
+        <h2 className="font-serif text-3xl md:text-4xl text-secondary font-bold tracking-tight mb-2">
+          Pedido Confirmado!
+        </h2>
+        <p className="font-sans text-body-lg text-on-surface-variant max-w-md mx-auto">
+          Obrigado pelo seu pedido. Ele já está sendo preparado com todo o carinho e ingredientes selecionados da Dona Cleusa.
+        </p>
+      </div>
+
+      {/* Structured Order Summary Card */}
+      <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0px_4px_20px_rgba(75,54,33,0.06)] border border-outline-variant/10 relative overflow-hidden mb-8">
+        <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-primary-container/20 rounded-full blur-2xl"></div>
+        
+        <h3 className="font-label-md text-label-md text-primary uppercase tracking-wider mb-4 border-b border-outline-variant/10 pb-2">
+          Resumo do Pedido
+        </h3>
+
+        <div className="space-y-3">
+          <div className="flex justify-between items-center py-1 border-b border-outline-variant/5">
+            <span className="text-on-surface-variant text-sm">Cliente</span>
+            <span className="font-label-md text-on-surface font-semibold">{pedido.clienteNome}</span>
+          </div>
+
+          <div className="flex justify-between items-center py-1 border-b border-outline-variant/5">
+            <span className="text-on-surface-variant text-sm">Sabor</span>
+            <span className="font-label-md text-on-surface text-right font-semibold">{pedido.saborNome}</span>
+          </div>
+
+          <div className="flex justify-between items-center py-1 border-b border-outline-variant/5">
+            <span className="text-on-surface-variant text-sm">Tamanho</span>
+            <span className="font-label-md text-on-surface font-semibold">{pedido.tamanhoLabel}</span>
+          </div>
+
+          <div className="flex justify-between items-center py-1 border-b border-outline-variant/5">
+            <span className="text-on-surface-variant text-sm">Data/Hora</span>
+            <span className="font-label-md text-on-surface font-semibold">
+              {new Date(pedido.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} às {pedido.horario}
+            </span>
+          </div>
+
+          <div className="flex justify-between items-center py-1 border-b border-outline-variant/5">
+            <span className="text-on-surface-variant text-sm">Forma de Pagamento</span>
+            <span className="font-label-md text-on-surface font-semibold uppercase text-xs">
+              {pedido.formaPagamento === 'pix' ? '📱 Pix' : pedido.formaPagamento === 'cartao' ? '💳 Cartão' : '💵 Dinheiro'}
+            </span>
+          </div>
+
+          {pedido.detalhes && (
+            <div className="flex justify-between items-start py-1 border-b border-outline-variant/5">
+              <span className="text-on-surface-variant text-sm shrink-0">Observação</span>
+              <span className="font-sans text-xs text-on-surface-variant text-right italic max-w-[200px] break-words">
+                "{pedido.detalhes}"
+              </span>
+            </div>
+          )}
+
+          <div className="pt-4 flex justify-between items-center">
+            <span className="font-serif text-2xl text-secondary">Total</span>
+            <span className="font-serif text-2xl font-bold text-tertiary">
+              R$ {pedido.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {pedido.formaPagamento === 'pix' && (
+        <div className="bg-primary-container/20 border border-primary/20 rounded-xl p-5 mb-8 space-y-4 animate-in fade-in duration-300 shadow-[0px_4px_20px_rgba(75,54,33,0.03)] text-on-surface">
+          <div className="flex items-center justify-between border-b border-primary/10 pb-2">
+            <span className="text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
+              <span>⚡</span> Pagar via Pix (Dona Cleusa)
+            </span>
+            <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded tracking-wide uppercase">
+              Pendente de Envio
+            </span>
+          </div>
+          
+          <p className="text-[11px] text-on-surface-variant leading-normal">
+            Dona Cleusa aceita pagamentos instantâneos via Pix no celular. Pague agora para agilizar a preparação e assar seu bolo no horário correto!
+          </p>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-1">
+            <div className="bg-surface-container-low p-3 rounded-lg border border-outline-variant/20 flex flex-col justify-between">
+              <span className="text-[10px] text-outline/80 font-bold uppercase tracking-wider">Chave Celular Pix</span>
+              <span className="text-sm font-bold text-on-surface font-mono mt-1">(12) 98827-5469</span>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText("12988275469");
+                  showToast("Chave Pix de Celular copiada com sucesso!");
+                }}
+                className="mt-2 text-[10px] text-primary font-bold hover:underline cursor-pointer flex items-center gap-1 self-start"
+              >
+                <span>Copiar Chave Celular</span>
+              </button>
+            </div>
+
+            <div className="bg-surface-container-low p-3 rounded-lg border border-outline-variant/20 flex flex-col justify-between">
+              <span className="text-[10px] text-outline/80 font-bold uppercase tracking-wider">Valor total a Pagar</span>
+              <span className="text-sm font-black text-tertiary mt-1">
+                R$ {pedido.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </span>
+              <span className="text-[9px] text-outline mt-1.5 leading-none">Confirme o valor no seu banco</span>
+            </div>
+          </div>
+
+          <div className="bg-surface-container-low p-3.5 rounded-lg border border-outline-variant/20 relative">
+            <span className="text-[10px] text-outline/80 font-bold uppercase tracking-wider block mb-1.5">
+              Código Pix Copia e Cola oficial:
+            </span>
+            <div className="font-mono text-[10px] text-on-surface break-all bg-white/55 p-2 rounded-md border border-outline-variant/10 max-h-[85px] overflow-y-auto select-all leading-normal">
+              {generatePixCopyPaste(pedido.total)}
+            </div>
+            <div className="flex justify-end mt-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(generatePixCopyPaste(pedido.total));
+                  showToast("Código Pix Copia e Cola copiado! Cole no app do seu banco.");
+                }}
+                className="px-4 py-2 bg-secondary text-white rounded-lg text-xs font-bold shadow-sm hover:opacity-95 cursor-pointer flex items-center gap-1.5 active:scale-[0.98] transition-all"
+              >
+                <span>Copiar Código Copia e Cola</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs text-amber-900 leading-normal space-y-1">
+            <p className="font-bold font-sans">⚠️ Envio do Comprovante Requerido:</p>
+            <p className="text-[11px] text-amber-800">
+              Para validar o seu agendamento, você deve realizar o pagamento e clicar no botão abaixo <strong>"Enviar Comprovante via WhatsApp"</strong> para encaminhar o comprovante e os detalhes à Dona Cleusa. Sem isso seu pedido pode sofrer atrasos.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Buttons */}
+      <div className="flex flex-col gap-3 w-full">
+        <button
+          onClick={handleWhatsAppAction}
+          className="w-full h-14 bg-tertiary text-white font-label-md rounded-full flex items-center justify-center gap-2 shadow-md hover:bg-tertiary/90 active:scale-95 transition-all cursor-pointer border border-tertiary/10"
+        >
+          <Send className="w-5 h-5 fill-white text-tertiary" />
+          <span>Enviar Comprovante via WhatsApp</span>
+        </button>
+
+        <button
+          onClick={onReset}
+          className="w-full h-14 bg-secondary-container text-on-secondary-container font-label-md rounded-full flex items-center justify-center gap-2 hover:bg-secondary-container/80 active:scale-95 transition-all cursor-pointer border border-outline-variant/10"
+        >
+          <Home className="w-5 h-5 text-secondary" />
+          <span>Voltar ao Início</span>
+        </button>
+      </div>
+
+      {/* Simulated Preview Box Modal */}
+      {showSimulatedMessage && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-surface p-6 rounded-2xl max-w-md w-full shadow-2xl border border-outline-variant/20 relative animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-4 text-secondary">
+              <Info className="w-6 h-6 text-tertiary" />
+              <h3 className="font-serif text-lg font-bold">Comprovante do Pedido</h3>
+            </div>
+            
+            <p className="text-xs text-on-surface-variant mb-4">
+              A janela de envio automático do WhatsApp foi aberta numa nova aba! Caso tenha sido bloqueada ou queira ver os detalhes estruturados, aqui está a mensagem enviada de forma idêntica:
+            </p>
+
+            <div className="bg-surface-container p-4 rounded-xl border border-outline-variant/30 font-mono text-xs text-on-surface whitespace-pre-wrap leading-relaxed select-all">
+              {customMessage}
+            </div>
+
+            <p className="text-[10px] text-tertiary mt-2">💡 Dica: Você pode copiar o texto acima e enviar para a Cleusa!</p>
+
+            <div className="mt-5 flex gap-2">
+              <button
+                onClick={() => {
+                  try {
+                    navigator.clipboard.writeText(customMessage);
+                    alert("Mensagem copiada para a área de transferência!");
+                  } catch (e) {
+                    // Fallback
+                  }
+                }}
+                className="flex-1 py-3 bg-secondary text-white text-xs font-semibold rounded-lg hover:bg-secondary/90 transition-all cursor-pointer"
+              >
+                Copiar Mensagem
+              </button>
+              <button
+                onClick={() => setShowSimulatedMessage(false)}
+                className="px-5 py-3 bg-surface-container-high text-on-surface text-xs font-semibold rounded-lg hover:bg-surface-container-highest transition-all cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Artistic Bottom Banner Image */}
+      <div className="mt-8 rounded-xl overflow-hidden shadow-lg aspect-[16/9] relative group border border-outline-variant/10">
+        <img
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+          src="https://lh3.googleusercontent.com/aida-public/AB6AXuDgm8Ww9FF4UuIIV4mS5CCF1rzWZ-TpARtIhG-Q5ZoiqvPuZ3W2BatsiIeYhoq1LrFPjUqDo5eSLxClwZ2RpmjXLkcHNPkEdYwBIMfod0OKPIhC_7bOnVqRCMp3yF-sLGdAYwqpHfQUChex6La0BHwWe642yGrol6f7Ivq95C9UrNm-D7sDjSXgkJDLrXmf8o4zAMVxdchfs2Y1FK7Xk6hr4y2ODbctk93w0SNa35rHexu3VB-km660W5gljd1HxBd37tUZRYUW7rye"
+          alt="Dona Cleusa premium cake showcase"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-secondary/40 to-transparent"></div>
+        <div className="absolute bottom-4 left-4">
+          <span className="text-on-secondary bg-secondary/70 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest">
+            Feito com Amor
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}

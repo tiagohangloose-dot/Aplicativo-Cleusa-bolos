@@ -1,0 +1,6 @@
+{
+  "name": "Cleusa Bolos",
+  "description": "Aplicativo de encomendas personalizadas com sistema de agendamento, cardápio interativo e painel de controle administrativo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

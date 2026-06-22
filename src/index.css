@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-surface: #fff9ee;
+  --color-surface-dim: #e0d9cc;
+  --color-surface-bright: #fff9ee;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #faf3e5;
+  --color-surface-container: #f4eddf;
+  --color-surface-container-high: #eee8da;
+  --color-surface-container-highest: #e8e2d4;
+  --color-on-surface: #1e1b13;
+  --color-on-surface-variant: #4f4445;
+  --color-inverse-surface: #333027;
+  --color-inverse-on-surface: #f7f0e2;
+  --color-outline: #817475;
+  --color-outline-variant: #d2c3c4;
+  --color-surface-tint: #73575b;
+  --color-primary: #73575b;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #f4d0d4;
+  --color-on-primary-container: #72575b;
+  --color-inverse-primary: #e1bec2;
+  --color-secondary: #725a42;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #fedcbe;
+  --color-on-secondary-container: #796048;
+  --color-tertiary: #85530b;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #ffd09e;
+  --color-on-tertiary-container: #85530b;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+}
+
+body {
+  background-color: #fff9ee;
+  color: #1e1b13;
+  font-family: var(--font-sans);
+}
+
+/* Custom subtle background pattern */
+.bg-pattern {
+  background-color: #fff9ee;
+  background-image: radial-gradient(#725a42 0.5px, transparent 0.5px), radial-gradient(#725a42 0.5px, #fff9ee 0.5px);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+  opacity: 0.05;
+}
+
