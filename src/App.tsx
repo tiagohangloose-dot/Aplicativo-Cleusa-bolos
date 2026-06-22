@@ -42,6 +42,11 @@ export default function App() {
     return local ? JSON.parse(local) : INITIAL_EXTRAS;
   });
 
+  const [tamanhos, setTamanhos] = useState<BoloTamanho[]>(() => {
+    const local = localStorage.getItem('cleusabolos_tamanhos');
+    return local ? JSON.parse(local) : INITIAL_SIZES;
+  });
+
   const [pedidos, setPedidos] = useState<Pedido[]>(() => {
     const local = localStorage.getItem('cleusabolos_pedidos');
     const parsed: Pedido[] = local ? JSON.parse(local) : INITIAL_ORDERS;
@@ -81,6 +86,10 @@ export default function App() {
   }, [extras]);
 
   useEffect(() => {
+    localStorage.setItem('cleusabolos_tamanhos', JSON.stringify(tamanhos));
+  }, [tamanhos]);
+
+  useEffect(() => {
     localStorage.setItem('cleusabolos_pedidos', JSON.stringify(pedidos));
   }, [pedidos]);
 
@@ -91,6 +100,11 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('cleusabolos_taxa_dois_recheios', taxaDoisRecheios.toString());
   }, [taxaDoisRecheios]);
+
+  // Handle updating a standard cake size dynamically in editor mode
+  const handleUpdateTamanho = (tamanhoId: string, updatedFields: Partial<BoloTamanho>) => {
+    setTamanhos(prev => prev.map(t => t.id === tamanhoId ? { ...t, ...updatedFields } : t));
+  };
 
   // Handle placing a new custom order in cake customizer mode
   const handlePlaceOrder = (newOrderFields: Omit<Pedido, 'id' | 'codigo' | 'dataCriacao'>) => {
@@ -175,6 +189,8 @@ export default function App() {
     // Persist completely
     localStorage.setItem('cleusabolos_sabores', JSON.stringify(sabores));
     localStorage.setItem('cleusabolos_extras', JSON.stringify(extras));
+    localStorage.setItem('cleusabolos_tamanhos', JSON.stringify(tamanhos));
+    localStorage.setItem('cleusabolos_taxa_dois_recheios', taxaDoisRecheios.toString());
   };
 
   const handleAdminLogout = () => {
@@ -290,7 +306,7 @@ export default function App() {
 
                   <OrderForm
                     sabores={sabores}
-                    tamanhos={INITIAL_SIZES}
+                    tamanhos={tamanhos}
                     extras={extras}
                     onPlaceOrder={handlePlaceOrder}
                     taxaDoisRecheios={taxaDoisRecheios}
@@ -542,9 +558,11 @@ export default function App() {
 
                   <ConfigView
                     sabores={sabores}
+                    tamanhos={tamanhos}
                     extras={extras}
                     onAddSabor={handleAddSabor}
                     onUpdateSabor={handleUpdateSabor}
+                    onUpdateTamanho={handleUpdateTamanho}
                     onAddExtra={handleAddExtra}
                     onDeleteExtra={handleDeleteExtra}
                     onSaveAll={handleSaveAllConfig}

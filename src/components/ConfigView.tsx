@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { BoloSabor, AdicionalExtra } from '../types';
+import { BoloSabor, BoloTamanho, AdicionalExtra } from '../types';
 import { Cake, Plus, X, Search, SlidersHorizontal, Image, DollarSign, Save } from 'lucide-react';
 
 interface ConfigViewProps {
   sabores: BoloSabor[];
+  tamanhos: BoloTamanho[];
   extras: AdicionalExtra[];
   onAddSabor: (sabor: BoloSabor) => void;
   onUpdateSabor: (id: string, updatedFields: Partial<BoloSabor>) => void;
+  onUpdateTamanho: (id: string, updatedFields: Partial<BoloTamanho>) => void;
   onAddExtra: (extra: AdicionalExtra) => void;
   onDeleteExtra: (id: string) => void;
   onSaveAll: () => void;
@@ -25,9 +27,11 @@ const CAKE_IMAGE_PRESETS = [
 
 export default function ConfigView({
   sabores,
+  tamanhos,
   extras,
   onAddSabor,
   onUpdateSabor,
+  onUpdateTamanho,
   onAddExtra,
   onDeleteExtra,
   onSaveAll,
@@ -161,11 +165,75 @@ export default function ConfigView({
         </div>
       </section>
 
+      {/* Preços adicionais dos Tamanhos Card */}
+      <section className="p-5 bg-surface-container-lowest rounded-xl shadow-[0px_4px_20px_rgba(75,54,33,0.06)] border border-outline-variant/10 animate-in fade-in duration-300">
+        <div className="flex items-center gap-3 mb-4">
+          <SlidersHorizontal className="w-5 h-5 text-primary" />
+          <h3 className="font-label-md text-label-md uppercase tracking-wider text-on-surface-variant font-bold">Acréscimos por Tamanho (P, M, G)</h3>
+        </div>
+
+        <div className="space-y-4">
+          <p className="text-[11px] text-on-surface-variant leading-relaxed">
+            Todos os bolos usam os tamanhos padrão G, M e P. Defina abaixo o valor adicional cobrado para os tamanhos maiores:
+          </p>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {tamanhos.map((tam) => (
+              <div key={tam.id} className="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant/10">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-bold text-xs text-secondary">{tam.label}</span>
+                  <span className="text-[10px] text-on-surface-variant bg-white/60 px-2 py-0.5 rounded-full font-semibold border border-outline-variant/5">
+                    {tam.fatias}
+                  </span>
+                </div>
+                
+                <div className="mb-2">
+                  <label className="block text-[10px] font-bold text-on-surface-variant/80 mb-1">
+                    Valor Adicional (R$)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[11px] font-semibold">R$</span>
+                    <input
+                      className="w-full bg-white rounded-lg p-2 pl-7 text-xs border border-outline-variant/15 outline-none font-semibold text-secondary focus:border-primary focus:ring-1 focus:ring-primary"
+                      type="number"
+                      step="1"
+                      value={tam.adicionalPreco}
+                      onChange={(e) => onUpdateTamanho(tam.id, { adicionalPreco: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-2 grid grid-cols-2 gap-1.5 pt-2 border-t border-dotted border-outline-variant/10">
+                  <div>
+                    <label className="block text-[9px] font-semibold text-on-surface-variant/70">Título</label>
+                    <input
+                      className="w-full bg-white rounded p-1 text-[10px] border border-outline-variant/10 outline-none font-medium"
+                      type="text"
+                      value={tam.label}
+                      onChange={(e) => onUpdateTamanho(tam.id, { label: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-semibold text-on-surface-variant/70">Rendimento</label>
+                    <input
+                      className="w-full bg-white rounded p-1 text-[10px] border border-outline-variant/10 outline-none font-medium"
+                      type="text"
+                      value={tam.fatias}
+                      onChange={(e) => onUpdateTamanho(tam.id, { fatias: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Cadastrar Novo Sabor Card (Screen 5 Section 1) */}
-      <section className="p-5 bg-surface-container-lowest rounded-xl shadow-[0px_4px_20px_rgba(75,54,33,0.06)] border border-outline-variant/10">
+      <section className="p-5 bg-surface-container-lowest rounded-xl shadow-[0px_4px_20px_rgba(75,54,33,0.06)] border border-outline-variant/10 animate-in fade-in duration-300">
         <div className="flex items-center gap-3 mb-4">
           <Cake className="w-5 h-5 text-tertiary" />
-          <h3 className="font-label-md text-label-md uppercase tracking-wider text-on-surface-variant font-bold">Novo Sabor de Bolo</h3>
+          <h3 className="font-label-md text-label-md uppercase tracking-wider text-on-surface-variant font-bold">Cadastrar Novo Recheio (Sabor)</h3>
         </div>
 
         <form onSubmit={handleAddNewBolo} className="space-y-4">
@@ -208,7 +276,7 @@ export default function ConfigView({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1">Nome do Sabor</label>
+            <label className="block text-xs font-semibold text-on-surface-variant mb-1">Nome do Recheio / Sabor</label>
             <input
               className="w-full bg-surface-container-low rounded-lg p-3 text-xs border border-outline-variant/20 focus:border-primary outline-none"
               placeholder="Ex: Red Velvet com Ninho"
@@ -221,7 +289,7 @@ export default function ConfigView({
 
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <label className="block text-[10px] font-semibold text-on-surface-variant mb-1 text-xs">Peso Base (kg)</label>
+              <label className="block text-[10px] font-semibold text-on-surface-variant mb-1 text-xs">Peso Estimado (kg)</label>
               <input
                 className="w-full bg-surface-container-low rounded-lg p-3 text-xs border border-outline-variant/20 outline-none"
                 placeholder="1.0"
@@ -232,9 +300,9 @@ export default function ConfigView({
               />
             </div>
             <div>
-              <label className="block text-[10px] font-semibold text-on-surface-variant mb-1 text-xs">Preço Base (R$)</label>
+              <label className="block text-[10px] font-semibold text-on-surface-variant mb-1 text-xs">Preço do Recheio (R$)</label>
               <input
-                className="w-full bg-surface-container-low rounded-lg p-3 text-xs border border-outline-variant/20 outline-none"
+                className="w-full bg-surface-container-low rounded-lg p-3 text-xs border border-outline-variant/20 outline-none font-bold text-secondary"
                 placeholder="75.00"
                 step="0.01"
                 type="number"
@@ -261,7 +329,7 @@ export default function ConfigView({
             className="w-full bg-primary text-white py-3 rounded-full font-sans text-xs font-semibold flex items-center justify-center gap-1.5 shadow hover:bg-opacity-95 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Cadastrar Novo Bolo</span>
+            <span>Cadastrar Novo Recheio</span>
           </button>
         </form>
       </section>
@@ -330,9 +398,9 @@ export default function ConfigView({
       {/* Cardápio Atual List Header */}
       <section className="space-y-4">
         <div className="flex justify-between items-center px-1 pt-2 border-t border-outline-variant/10">
-          <h3 className="font-serif italic font-bold text-lg text-primary">Cardápio Atual</h3>
+          <h3 className="font-serif italic font-bold text-lg text-primary">Preço dos Recheios (Lista)</h3>
           <span className="font-sans text-xs text-on-surface-variant font-semibold">
-            {filteredSabores.length} Sabores Cadastrados
+            {filteredSabores.length} Opções de Recheio
           </span>
         </div>
 
@@ -391,7 +459,7 @@ export default function ConfigView({
               {/* Dynamic inputs for instant price updates */}
               <div className="grid grid-cols-2 gap-3 pt-3 border-t border-outline-variant/10">
                 <div>
-                  <span className="block text-[10px] text-on-surface-variant font-semibold mb-1 uppercase">Peso (kg)</span>
+                  <span className="block text-[10px] text-on-surface-variant font-bold mb-1 uppercase">Peso Est. (kg)</span>
                   <input
                     className="w-full bg-surface-container-low/50 rounded-lg p-2 text-xs border border-outline-variant/10 focus:border-primary outline-none"
                     type="number"
@@ -406,9 +474,9 @@ export default function ConfigView({
                   />
                 </div>
                 <div>
-                  <span className="block text-[10px] text-on-surface-variant font-semibold mb-1 uppercase font-sans">Preço (R$)</span>
+                  <span className="block text-[10px] text-on-surface-variant font-bold mb-1 uppercase font-sans">Valor do Recheio (R$)</span>
                   <input
-                    className="w-full bg-surface-container-low/50 rounded-lg p-2 text-xs border border-outline-variant/10 focus:border-primary outline-none"
+                    className="w-full bg-surface-container-low/50 rounded-lg p-2 text-xs border border-outline-variant/10 focus:border-primary outline-none font-bold text-secondary"
                     type="number"
                     step="0.01"
                     disabled={!isEnabled}
