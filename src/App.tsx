@@ -14,7 +14,8 @@ import {
   ArrowRight,
   CheckCircle,
   Sparkles,
-  Trash2
+  Trash2,
+  Lock
 } from 'lucide-react';
 
 // Static assets and default structures
@@ -120,6 +121,19 @@ export default function App() {
     setMeusPedidosIds(prev => prev.filter(id => id !== pedidoId));
     if (lastPlacedOrder && lastPlacedOrder.id === pedidoId) {
       setLastPlacedOrder(null);
+    }
+  };
+
+  const getHoursUntilDelivery = (ped: Pedido): number => {
+    try {
+      const [year, month, day] = ped.data.split('-').map(Number);
+      const [hour, min] = (ped.horario || '12:00').split(':').map(Number);
+      const deliveryDate = new Date(year, month - 1, day, hour, min || 0, 0);
+      const now = new Date();
+      const diffInMs = deliveryDate.getTime() - now.getTime();
+      return diffInMs / (1000 * 60 * 60);
+    } catch (err) {
+      return 999;
     }
   };
 
@@ -383,41 +397,66 @@ export default function App() {
                                 📍 <strong>Endereço de Entrega:</strong> {ped.rua}, {ped.numero} - {ped.bairro}, {ped.cidade}/{ped.estado}
                               </p>
                             )}
-                            {ped.adicionais.length > 0 && <p className="italic text-on-surface-variant leading-relaxed text-[11px] mt-1 p-1 bg-white/20 rounded"><strong>Notas:</strong> {ped.adicionais.join(', ')}</p>}
+                            {ped.adicionais.length > 0 && (
+                              <p className="italic text-on-surface-variant leading-relaxed text-[11px] mt-1 p-1 bg-white/20 rounded">
+                                <strong>Notas:</strong> {ped.adicionais.join(', ')}
+                              </p>
+                            )}
                           </div>
 
                           <div className="flex justify-between items-center text-xs border-t border-outline-variant/10 pt-2.5 mt-1">
-                            {confirmingDeleteId === ped.id ? (
-                              <div className="flex items-center gap-2 bg-rose-50 border border-rose-100 p-1.5 rounded-lg animate-in fade-in duration-200">
-                                <span className="text-[10px] font-bold text-[#ba1a1a]">Excluir mesmo?</span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleDeletePedido(ped.id);
-                                    setConfirmingDeleteId(null);
-                                  }}
-                                  className="text-[10px] bg-[#ba1a1a] text-white font-bold px-2.5 py-1 rounded hover:opacity-90 transition-opacity cursor-pointer"
-                                >
-                                  Sim
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setConfirmingDeleteId(null)}
-                                  className="text-[10px] bg-slate-200 text-slate-700 font-bold px-2.5 py-1 rounded hover:bg-slate-300 transition-colors cursor-pointer"
-                                >
-                                  Não
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => setConfirmingDeleteId(ped.id)}
-                                className="text-[11px] text-[#ba1a1a] hover:underline flex items-center gap-1 cursor-pointer font-medium bg-rose-50/50 hover:bg-rose-50 px-2 py-1 rounded transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                <span>Excluir Encomenda</span>
-                              </button>
-                            )}
+                            {(() => {
+                              const hoursLeft = getHoursUntilDelivery(ped);
+                              const isPastOrUnder48 = hoursLeft < 48;
+
+                              if (isPastOrUnder48) {
+                                return (
+                                  <div className="flex flex-col gap-1 max-w-[220px] text-[10px] text-slate-500 bg-slate-100/80 p-2 rounded-lg border border-slate-200/60 leading-snug">
+                                    <div className="flex items-center gap-1 font-bold text-slate-700">
+                                      <Info className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                      <span>Cancelamento Bloqueado</span>
+                                    </div>
+                                    <p>Faltam menos de 48h para a entrega. Solicite no WhatsApp com a Dona Cleusa.</p>
+                                  </div>
+                                );
+                              }
+
+                              return (
+                                <>
+                                  {confirmingDeleteId === ped.id ? (
+                                    <div className="flex items-center gap-2 bg-rose-50 border border-rose-100 p-1.5 rounded-lg animate-in fade-in duration-200">
+                                      <span className="text-[10px] font-bold text-[#ba1a1a]">Excluir mesmo?</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleDeletePedido(ped.id);
+                                          setConfirmingDeleteId(null);
+                                        }}
+                                        className="text-[10px] bg-[#ba1a1a] text-white font-bold px-2.5 py-1 rounded hover:opacity-90 transition-opacity cursor-pointer"
+                                      >
+                                        Sim
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setConfirmingDeleteId(null)}
+                                        className="text-[10px] bg-slate-200 text-slate-700 font-bold px-2.5 py-1 rounded hover:bg-slate-300 transition-colors cursor-pointer"
+                                      >
+                                        Não
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmingDeleteId(ped.id)}
+                                      className="text-[11px] text-[#ba1a1a] hover:underline flex items-center gap-1 cursor-pointer font-medium bg-rose-50/50 hover:bg-rose-50 px-2 py-1 rounded transition-colors"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                      <span>Excluir Encomenda</span>
+                                    </button>
+                                  )}
+                                </>
+                              );
+                            })()}
                             <div className="flex flex-col items-end">
                               <span className="text-[10px] text-on-surface-variant">Valor Total</span>
                               <span className="font-serif font-bold text-tertiary text-sm">
@@ -484,67 +523,82 @@ export default function App() {
       </main>
 
       {/* Persistent Bottom Bar Navigation with touch targets of at least 44px height */}
-      <nav className="fixed bottom-0 left-0 w-full z-50 bg-surface/90 backdrop-blur-md rounded-t-2xl shadow-[0px_-4px_25px_rgba(75,54,33,0.06)] border-t border-outline-variant/10 py-3.5 px-6 flex justify-around items-center">
+      <nav className="fixed bottom-0 left-0 w-full z-50 bg-surface/95 backdrop-blur-md rounded-t-2xl shadow-[0px_-4px_25px_rgba(75,54,33,0.08)] border-t border-outline-variant/10 py-3 px-3 flex justify-between items-center">
         
-        {/* TAB 1: MENU */}
-        <button
-          onClick={() => { setLastPlacedOrder(null); setActiveTab('menu'); }}
-          className={`flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer h-12 w-16 ${
-            activeTab === 'menu'
-              ? 'text-primary scale-105 font-bold'
-              : 'text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          <div className={`p-1.5 rounded-full transition-colors ${activeTab === 'menu' ? 'bg-primary-container' : 'bg-transparent'}`}>
-            <Cake className={`w-5 h-5 ${activeTab === 'menu' ? 'text-secondary' : 'text-outline/70'}`} />
-          </div>
-          <span className="text-[10px] tracking-wide font-sans font-semibold">Menu</span>
-        </button>
+        {/* PUBLIC CUSTOMER REGION */}
+        <div className="flex-1 flex justify-around items-center">
+          {/* TAB 1: MENU (Pedir Bolo) */}
+          <button
+            onClick={() => { setLastPlacedOrder(null); setActiveTab('menu'); }}
+            className={`flex flex-col items-center justify-center gap-1 transition-all cursor-pointer h-12 w-[72px] ${
+              activeTab === 'menu'
+                ? 'text-primary scale-105 font-bold'
+                : 'text-on-surface-variant/80 hover:text-on-surface'
+            }`}
+          >
+            <div className={`p-1.5 rounded-full transition-colors ${activeTab === 'menu' ? 'bg-primary-container' : 'bg-transparent'}`}>
+              <Cake className={`w-5 h-5 ${activeTab === 'menu' ? 'text-secondary' : 'text-outline/70'}`} />
+            </div>
+            <span className="text-[10px] tracking-tight font-sans font-semibold">Pedir Bolo</span>
+          </button>
 
-        {/* TAB 2: AGENDA */}
-        <button
-          onClick={() => setActiveTab('agenda')}
-          className={`flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer h-12 w-16 ${
-            activeTab === 'agenda'
-              ? 'text-primary scale-105 font-bold'
-              : 'text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          <div className={`p-1.5 rounded-full transition-colors ${activeTab === 'agenda' ? 'bg-primary-container' : 'bg-transparent'}`}>
-            <Calendar className={`w-5 h-5 ${activeTab === 'agenda' ? 'text-secondary' : 'text-outline/70'}`} />
-          </div>
-          <span className="text-[10px] tracking-wide font-sans font-semibold">Agenda</span>
-        </button>
+          {/* TAB 2: PEDIDOS TRACKER (Meus Pedidos) */}
+          <button
+            onClick={() => setActiveTab('pedidos')}
+            className={`flex flex-col items-center justify-center gap-1 transition-all cursor-pointer h-12 w-[72px] ${
+              activeTab === 'pedidos'
+                ? 'text-primary scale-105 font-bold'
+                : 'text-on-surface-variant/80 hover:text-on-surface'
+            }`}
+          >
+            <div className={`p-1.5 rounded-full transition-colors ${activeTab === 'pedidos' ? 'bg-primary-container' : 'bg-transparent'}`}>
+              <ListTodo className={`w-5 h-5 ${activeTab === 'pedidos' ? 'text-secondary' : 'text-outline/70'}`} />
+            </div>
+            <span className="text-[10px] tracking-tight font-sans font-semibold">Meus Pedidos</span>
+          </button>
+        </div>
 
-        {/* TAB 3: PEDIDOS TRACKER */}
-        <button
-          onClick={() => setActiveTab('pedidos')}
-          className={`flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer h-12 w-16 ${
-            activeTab === 'pedidos'
-              ? 'text-primary scale-105 font-bold'
-              : 'text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          <div className={`p-1.5 rounded-full transition-colors ${activeTab === 'pedidos' ? 'bg-primary-container' : 'bg-transparent'}`}>
-            <ListTodo className={`w-5 h-5 ${activeTab === 'pedidos' ? 'text-secondary' : 'text-outline/70'}`} />
-          </div>
-          <span className="text-[10px] tracking-wide font-sans font-semibold">Pedidos</span>
-        </button>
+        {/* Vertical Separator */}
+        <div className="h-7 w-[1.5px] bg-outline-variant/30 mx-1"></div>
 
-        {/* TAB 4: PERFIL / ADMINISTRATIVE SETTINGS */}
-        <button
-          onClick={() => setActiveTab('perfil')}
-          className={`flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer h-12 w-16 ${
-            activeTab === 'perfil'
-              ? 'text-primary scale-105 font-bold'
-              : 'text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          <div className={`p-1.5 rounded-full transition-colors ${activeTab === 'perfil' ? 'bg-primary-container' : 'bg-transparent'}`}>
-            <User className={`w-5 h-5 ${activeTab === 'perfil' ? 'text-secondary' : 'text-outline/70'}`} />
-          </div>
-          <span className="text-[10px] tracking-wide font-sans font-semibold">Perfil</span>
-        </button>
+        {/* RESTRICTED CLEUSA/ADMIN REGION - Distinctly colored to show "NÃO ABERTO" (Restricted) */}
+        <div className="flex-1 flex justify-around items-center bg-outline-variant/15 py-1.5 px-1 rounded-xl">
+          {/* TAB 3: AGENDA (Restricted) */}
+          <button
+            onClick={() => setActiveTab('agenda')}
+            className={`flex flex-col items-center justify-center gap-1 transition-all cursor-pointer h-11 w-16 ${
+              activeTab === 'agenda'
+                ? 'text-secondary scale-105 font-bold'
+                : 'text-outline hover:text-on-surface-variant'
+            }`}
+            title="Acesso restrito à Dona Cleusa"
+          >
+            <div className={`p-1 rounded-full transition-colors ${activeTab === 'agenda' ? 'bg-secondary/15' : 'bg-transparent'}`}>
+              <Calendar className="w-4.5 h-4.5" />
+            </div>
+            <span className="text-[9px] tracking-tight font-sans font-semibold flex items-center gap-0.5 text-on-surface-variant/80">
+              Agenda <Lock className="w-2.5 h-2.5 shrink-0 text-outline" />
+            </span>
+          </button>
+
+          {/* TAB 4: PERFIL (Restricted) */}
+          <button
+            onClick={() => setActiveTab('perfil')}
+            className={`flex flex-col items-center justify-center gap-1 transition-all cursor-pointer h-11 w-16 ${
+              activeTab === 'perfil'
+                ? 'text-secondary scale-105 font-bold'
+                : 'text-outline hover:text-on-surface-variant'
+            }`}
+            title="Acesso restrito à Dona Cleusa"
+          >
+            <div className={`p-1 rounded-full transition-colors ${activeTab === 'perfil' ? 'bg-secondary/15' : 'bg-transparent'}`}>
+              <User className="w-4.5 h-4.5" />
+            </div>
+            <span className="text-[9px] tracking-tight font-sans font-semibold flex items-center gap-0.5 text-on-surface-variant/80">
+              Perfil <Lock className="w-2.5 h-2.5 shrink-0 text-outline" />
+            </span>
+          </button>
+        </div>
 
       </nav>
     </div>
