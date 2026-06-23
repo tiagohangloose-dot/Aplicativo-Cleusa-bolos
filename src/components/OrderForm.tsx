@@ -649,29 +649,6 @@ export default function OrderForm({
         {/* DYNAMIC FORM SEGMENTS ACCORDING TO TIPO BOLO */}
         {tipoBolo === 'doce' && (
           <div className="space-y-4 animate-in fade-in duration-300">
-            {/* Dynamic Image Showcase */}
-            {recheio1 && (
-              <div className="mb-4 rounded-xl overflow-hidden shadow-md aspect-[16/9] relative group">
-                <img
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  src={recheio1.imagem || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&auto=format&fit=crop&q=60'}
-                  alt={recheio1.nome}
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent"></div>
-                <div className="absolute bottom-3 left-3 flex flex-wrap gap-2 items-center">
-                  <span className="text-on-secondary bg-primary/80 backdrop-blur-sm px-2.5 py-1 rounded-full text-[11px] font-semibold tracking-wider uppercase">
-                    {recheio1.nome}
-                  </span>
-                  {checkIsEspecial(recheio1) && (
-                    <span className="text-white bg-tertiary px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">
-                      ⭐ Especial (+R$ {getSaborAdicional(recheio1).toFixed(2)})
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-
             {/* Escolha a Massa */}
             <div>
               <label className="block font-label-md text-xs text-on-surface-variant mb-2 font-bold uppercase tracking-wider">
@@ -859,25 +836,6 @@ export default function OrderForm({
 
         {tipoBolo === 'piscina' && (
           <div className="space-y-4 animate-in fade-in duration-300">
-            {/* Beautiful Pool Cake representation */}
-            <div className="mb-4 rounded-xl overflow-hidden shadow-md aspect-[16/9] relative group">
-              <img
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                src="https://images.unsplash.com/photo-1516685018646-549198525c1b?w=600&auto=format&fit=crop&q=60"
-                alt="Bolo Piscina"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent"></div>
-              <div className="absolute bottom-3 left-3 flex items-center justify-between w-[92%]">
-                <span className="text-on-secondary bg-primary/80 backdrop-blur-sm px-2.5 py-1 rounded-full text-[11px] font-semibold tracking-wider uppercase">
-                  Bolo Piscina / Vulcão
-                </span>
-                <span className="bg-tertiary text-white font-bold text-xs px-2.5 py-1 rounded-full">
-                  R$ {precoPiscina.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-            </div>
-
             {/* Select Piscina flavor */}
             <div>
               <label className="block font-label-md text-xs text-on-surface-variant mb-1 font-bold uppercase tracking-wider" htmlFor="saborPiscina">

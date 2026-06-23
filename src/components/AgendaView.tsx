@@ -24,6 +24,44 @@ interface AgendaViewProps {
   onDeletePedido?: (pedidoId: string) => void;
 }
 
+// Helper to get Friday, Saturday, and Sunday ISO dates of the current/upcoming weekend relative to today
+function getWeekendDates(): { friday: string; saturday: string; sunday: string } {
+  const now = new Date();
+  const currentDay = now.getDay(); // 0 is Sunday, 1 is Monday ... 6 is Saturday
+  
+  // Calculate difference to Friday (5)
+  let diffToFriday = 5 - currentDay;
+  if (currentDay === 0) {
+    // If today is Sunday, Friday was 2 days ago, so let's include it in this weekend's range
+    diffToFriday = -2;
+  } else if (currentDay === 6) {
+    // If today is Saturday, Friday was 1 day ago
+    diffToFriday = -1;
+  }
+  
+  const friday = new Date(now);
+  friday.setDate(now.getDate() + diffToFriday);
+  
+  const saturday = new Date(friday);
+  saturday.setDate(friday.getDate() + 1);
+  
+  const sunday = new Date(friday);
+  sunday.setDate(friday.getDate() + 2);
+  
+  const formatDate = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  
+  return {
+    friday: formatDate(friday),
+    saturday: formatDate(saturday),
+    sunday: formatDate(sunday)
+  };
+}
+
 export default function AgendaView({
   pedidos,
   sabores,
@@ -31,6 +69,8 @@ export default function AgendaView({
   onAddPedido,
   onDeletePedido
 }: AgendaViewProps) {
+  const { friday: fDate, saturday: saDate, sunday: suDate } = getWeekendDates();
+
   const [activeSegmentFilter, setActiveSegmentFilter] = useState<'fds' | 'proxima' | 'mes' | 'entregas'>('fds');
   // Day filter (Sexta, Sábado, Domingo, or All)
   const [selectedDay, setSelectedDay] = useState <'sexta' | 'sabado' | 'domingo'>('sexta');
@@ -45,21 +85,27 @@ export default function AgendaView({
   const [addWhats, setAddWhats] = useState('');
   const [addSabor, setAddSabor] = useState(sabores[0]?.nome || '');
   const [addTamanho, setAddTamanho] = useState('M (2kg)');
-  const [addData, setAddData] = useState('2026-06-26');
+  const [addData, setAddData] = useState(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  });
   const [addHora, setAddHora] = useState('14:30');
   const [addTotal, setAddTotal] = useState('145.00');
   const [addNotas, setAddNotas] = useState('');
   const [addFormaPagamento, setAddFormaPagamento] = useState<'pix' | 'cartao' | 'dinheiro'>('pix');
 
   // 1. Calculate stats based on active calendar segment
-  // Mock filter: Weekend of 26-28 June 2026
-  const weekendPedidos = pedidos.filter(p => ['2026-06-26', '2026-06-27', '2026-06-28'].includes(p.data));
+  // Dynamic current weekend dates
+  const weekendPedidos = pedidos.filter(p => [fDate, saDate, suDate].includes(p.data));
   const activeWeekendCount = weekendPedidos.length;
 
   // Day calculations for display badges
-  const sextaPedidos = pedidos.filter(p => p.data === '2026-06-26');
-  const sabadoPedidos = pedidos.filter(p => p.data === '2026-06-27');
-  const domingoPedidos = pedidos.filter(p => p.data === '2026-06-28');
+  const sextaPedidos = pedidos.filter(p => p.data === fDate);
+  const sabadoPedidos = pedidos.filter(p => p.data === saDate);
+  const domingoPedidos = pedidos.filter(p => p.data === suDate);
 
   // Filter current list of orders to display based on active sub-tab
   let displayedPedidos = weekendPedidos;
@@ -72,8 +118,8 @@ export default function AgendaView({
       displayedPedidos = domingoPedidos;
     }
   } else if (activeSegmentFilter === 'proxima') {
-    // Mock showing any next week items or a wider window
-    displayedPedidos = pedidos.filter(p => !['2026-06-26', '2026-06-27', '2026-06-28'].includes(p.data));
+    // Show rest of the orders excluding the current weekend
+    displayedPedidos = pedidos.filter(p => ![fDate, saDate, suDate].includes(p.data));
   } else if (activeSegmentFilter === 'entregas') {
     // Father's delivery list: shows only orders that are ready ('entregue') and are set to delivery ('entrega')
     displayedPedidos = pedidos.filter(p => p.status === 'entregue' && p.tipoEntrega === 'entrega');

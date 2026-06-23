@@ -670,27 +670,35 @@ export default function App() {
               <div>
                 <div className="mb-6">
                   <h2 className="font-serif text-2xl text-secondary font-bold italic">
-                    Minhas Encomendas
+                    {adminLoggedIn ? "Todas as Encomendas" : "Minhas Encomendas"}
                   </h2>
                   <p className="font-sans text-xs text-on-surface-variant">
-                    Consulte os pedidos que você inseriu na sessão atual para acompanhamento de produção.
+                    {adminLoggedIn 
+                      ? "Visualização e controle geral de todas as encomendas em nuvem do sistema."
+                      : "Consulte os pedidos que você inseriu na sessão atual para acompanhamento de produção."}
                   </p>
                 </div>
 
                 {(() => {
-                  const meusPedidos = pedidos.filter(p => meusPedidosIds.includes(p.id));
+                  const meusPedidos = adminLoggedIn ? pedidos : pedidos.filter(p => meusPedidosIds.includes(p.id));
                   if (meusPedidos.length === 0) {
                     return (
                       <div className="bg-surface-container-lowest p-8 text-center rounded-xl border border-outline-variant/15 text-on-surface">
                         <ListTodo className="w-10 h-10 text-outline/30 mx-auto mb-2" />
-                        <p className="text-sm font-semibold text-secondary">Nenhum pedido feito ainda nesta sessão!</p>
-                        <p className="text-xs text-on-surface-variant mt-1">Vá em "Menu" para montar seu bolo personalizado.</p>
-                        <button
-                          onClick={() => setActiveTab('menu')}
-                          className="mt-4 px-4 py-2 bg-primary text-white text-xs font-semibold rounded-lg shadow-sm hover:opacity-90 cursor-pointer"
-                        >
-                          Montar Meu Bolo
-                        </button>
+                        <p className="text-sm font-semibold text-secondary">
+                          {adminLoggedIn ? "Nenhuma encomenda no banco de dados!" : "Nenhum pedido feito ainda nesta sessão!"}
+                        </p>
+                        <p className="text-xs text-on-surface-variant mt-1">
+                          {adminLoggedIn ? "Aguardando novos pedidos dos clientes." : "Vá em \"Menu\" para montar seu bolo personalizado."}
+                        </p>
+                        {!adminLoggedIn && (
+                          <button
+                            onClick={() => setActiveTab('menu')}
+                            className="mt-4 px-4 py-2 bg-primary text-white text-xs font-semibold rounded-lg shadow-sm hover:opacity-90 cursor-pointer"
+                          >
+                            Montar Meu Bolo
+                          </button>
+                        )}
                       </div>
                     );
                   }
@@ -928,7 +936,9 @@ export default function App() {
             <div className={`p-1.5 rounded-full transition-colors ${activeTab === 'pedidos' ? 'bg-primary-container' : 'bg-transparent'}`}>
               <ListTodo className={`w-5 h-5 ${activeTab === 'pedidos' ? 'text-secondary' : 'text-outline/70'}`} />
             </div>
-            <span className="text-[10px] tracking-tight font-sans font-semibold">Meus Pedidos</span>
+            <span className="text-[10px] tracking-tight font-sans font-semibold">
+              {adminLoggedIn ? "Pedidos" : "Meus Pedidos"}
+            </span>
           </button>
         </div>
 
