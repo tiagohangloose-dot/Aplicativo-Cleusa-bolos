@@ -95,6 +95,9 @@ export default function App() {
     return localStorage.getItem('cleusabolos_admin_session') === 'true';
   });
 
+  // Track if Firebase settings doc has been downloaded/synced for the first time
+  const [settingsLoaded, setSettingsLoaded] = useState<boolean>(false);
+
   // Flat fee for cakes that use 2 fillings
   const [taxaDoisRecheios, setTaxaDoisRecheios] = useState<number>(() => {
     const local = localStorage.getItem('cleusabolos_taxa_dois_recheios');
@@ -126,18 +129,24 @@ export default function App() {
     return localStorage.getItem('cleusabolos_img_bolo_piscina') || 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=800&auto=format&fit=crop&q=80';
   });
 
-  // 3. Keep local storage in sync
+  // 3. Keep local storage in sync (only after cloud has been loaded to avoid wiping local cache with defaults)
   useEffect(() => {
-    localStorage.setItem('cleusabolos_sabores', JSON.stringify(sabores));
-  }, [sabores]);
+    if (settingsLoaded) {
+      localStorage.setItem('cleusabolos_sabores', JSON.stringify(sabores));
+    }
+  }, [sabores, settingsLoaded]);
 
   useEffect(() => {
-    localStorage.setItem('cleusabolos_extras', JSON.stringify(extras));
-  }, [extras]);
+    if (settingsLoaded) {
+      localStorage.setItem('cleusabolos_extras', JSON.stringify(extras));
+    }
+  }, [extras, settingsLoaded]);
 
   useEffect(() => {
-    localStorage.setItem('cleusabolos_tamanhos', JSON.stringify(tamanhos));
-  }, [tamanhos]);
+    if (settingsLoaded) {
+      localStorage.setItem('cleusabolos_tamanhos', JSON.stringify(tamanhos));
+    }
+  }, [tamanhos, settingsLoaded]);
 
   useEffect(() => {
     localStorage.setItem('cleusabolos_pedidos', JSON.stringify(pedidos));
@@ -148,40 +157,58 @@ export default function App() {
   }, [meusPedidosIds]);
 
   useEffect(() => {
-    localStorage.setItem('cleusabolos_taxa_dois_recheios', taxaDoisRecheios.toString());
-  }, [taxaDoisRecheios]);
+    if (settingsLoaded) {
+      localStorage.setItem('cleusabolos_taxa_dois_recheios', taxaDoisRecheios.toString());
+    }
+  }, [taxaDoisRecheios, settingsLoaded]);
 
   useEffect(() => {
-    localStorage.setItem('cleusabolos_taxa_sabor_especial', taxaSaborEspecial.toString());
-  }, [taxaSaborEspecial]);
+    if (settingsLoaded) {
+      localStorage.setItem('cleusabolos_taxa_sabor_especial', taxaSaborEspecial.toString());
+    }
+  }, [taxaSaborEspecial, settingsLoaded]);
 
   useEffect(() => {
-    localStorage.setItem('cleusabolos_taxa_entrega', taxaEntrega.toString());
-  }, [taxaEntrega]);
+    if (settingsLoaded) {
+      localStorage.setItem('cleusabolos_taxa_entrega', taxaEntrega.toString());
+    }
+  }, [taxaEntrega, settingsLoaded]);
 
   useEffect(() => {
-    localStorage.setItem('cleusabolos_tamanhos_salgado', JSON.stringify(tamanhosSalgado));
-  }, [tamanhosSalgado]);
+    if (settingsLoaded) {
+      localStorage.setItem('cleusabolos_tamanhos_salgado', JSON.stringify(tamanhosSalgado));
+    }
+  }, [tamanhosSalgado, settingsLoaded]);
 
   useEffect(() => {
-    localStorage.setItem('cleusabolos_sabores_piscina', JSON.stringify(saboresPiscina));
-  }, [saboresPiscina]);
+    if (settingsLoaded) {
+      localStorage.setItem('cleusabolos_sabores_piscina', JSON.stringify(saboresPiscina));
+    }
+  }, [saboresPiscina, settingsLoaded]);
 
   useEffect(() => {
-    localStorage.setItem('cleusabolos_preco_piscina', precoPiscina.toString());
-  }, [precoPiscina]);
+    if (settingsLoaded) {
+      localStorage.setItem('cleusabolos_preco_piscina', precoPiscina.toString());
+    }
+  }, [precoPiscina, settingsLoaded]);
 
   useEffect(() => {
-    localStorage.setItem('cleusabolos_img_bolo_doce', imagemBoloDoce);
-  }, [imagemBoloDoce]);
+    if (settingsLoaded) {
+      localStorage.setItem('cleusabolos_img_bolo_doce', imagemBoloDoce);
+    }
+  }, [imagemBoloDoce, settingsLoaded]);
 
   useEffect(() => {
-    localStorage.setItem('cleusabolos_img_bolo_salgado', imagemBoloSalgado);
-  }, [imagemBoloSalgado]);
+    if (settingsLoaded) {
+      localStorage.setItem('cleusabolos_img_bolo_salgado', imagemBoloSalgado);
+    }
+  }, [imagemBoloSalgado, settingsLoaded]);
 
   useEffect(() => {
-    localStorage.setItem('cleusabolos_img_bolo_piscina', imagemBoloPiscina);
-  }, [imagemBoloPiscina]);
+    if (settingsLoaded) {
+      localStorage.setItem('cleusabolos_img_bolo_piscina', imagemBoloPiscina);
+    }
+  }, [imagemBoloPiscina, settingsLoaded]);
 
   // Connect real-time Firebase listeners when component mounts
   useEffect(() => {
@@ -198,6 +225,7 @@ export default function App() {
       setImagemBoloDoce(newSettings.imagemBoloDoce);
       setImagemBoloSalgado(newSettings.imagemBoloSalgado);
       setImagemBoloPiscina(newSettings.imagemBoloPiscina);
+      setSettingsLoaded(true);
     });
 
     const unsubOrders = listenToOrders((loadedOrders) => {
@@ -210,17 +238,29 @@ export default function App() {
     };
   }, []);
 
-  // Handle updating a standard cake size dynamically in editor mode
+  // Handle updating a standard cake size dynamically in editor mode with autosave to Cloud
   const handleUpdateTamanho = (tamanhoId: string, updatedFields: Partial<BoloTamanho>) => {
-    setTamanhos(prev => prev.map(t => t.id === tamanhoId ? { ...t, ...updatedFields } : t));
+    const updated = tamanhos.map(t => t.id === tamanhoId ? { ...t, ...updatedFields } : t);
+    setTamanhos(updated);
+    saveSettingsToCloud({ tamanhos: updated }).catch(err => {
+      console.error('Error saving tamanhos to cloud:', err);
+    });
   };
 
   const handleUpdateTamanhoSalgado = (tamanhoId: string, updatedFields: Partial<BoloSalgadoTamanho>) => {
-    setTamanhosSalgado(prev => prev.map(t => t.id === tamanhoId ? { ...t, ...updatedFields } : t));
+    const updated = tamanhosSalgado.map(t => t.id === tamanhoId ? { ...t, ...updatedFields } : t);
+    setTamanhosSalgado(updated);
+    saveSettingsToCloud({ tamanhosSalgado: updated }).catch(err => {
+      console.error('Error saving tamanhosSalgado to cloud:', err);
+    });
   };
 
   const handleUpdateSaborPiscina = (saborId: string, updatedFields: Partial<BoloPiscinaSabor>) => {
-    setSaboresPiscina(prev => prev.map(s => s.id === saborId ? { ...s, ...updatedFields } : s));
+    const updated = saboresPiscina.map(s => s.id === saborId ? { ...s, ...updatedFields } : s);
+    setSaboresPiscina(updated);
+    saveSettingsToCloud({ saboresPiscina: updated }).catch(err => {
+      console.error('Error saving saboresPiscina to cloud:', err);
+    });
   };
 
   const handleAddSaborPiscina = (nome: string) => {
@@ -229,11 +269,19 @@ export default function App() {
       nome,
       status: 'disponivel'
     };
-    setSaboresPiscina(prev => [...prev, newSabor]);
+    const updated = [...saboresPiscina, newSabor];
+    setSaboresPiscina(updated);
+    saveSettingsToCloud({ saboresPiscina: updated }).catch(err => {
+      console.error('Error saving new sabor piscina to cloud:', err);
+    });
   };
 
   const handleDeleteSaborPiscina = (saborId: string) => {
-    setSaboresPiscina(prev => prev.filter(s => s.id !== saborId));
+    const updated = saboresPiscina.filter(s => s.id !== saborId);
+    setSaboresPiscina(updated);
+    saveSettingsToCloud({ saboresPiscina: updated }).catch(err => {
+      console.error('Error deleting sabor piscina from cloud:', err);
+    });
   };
 
   // Handle placing a new custom order in cake customizer mode
@@ -301,9 +349,13 @@ export default function App() {
     }
   };
 
-  // Config actions
+  // Config actions with automatic cloud sync
   const handleAddSabor = (newSabor: BoloSabor) => {
-    setSabores([...sabores, newSabor]);
+    const updated = [...sabores, newSabor];
+    setSabores(updated);
+    saveSettingsToCloud({ sabores: updated }).catch(err => {
+      console.error('Error adding sabor to cloud:', err);
+    });
   };
 
   const handleUpdateSabor = (id: string, updatedFields: Partial<BoloSabor>) => {
@@ -314,18 +366,82 @@ export default function App() {
       return s;
     });
     setSabores(updated);
+    saveSettingsToCloud({ sabores: updated }).catch(err => {
+      console.error('Error updating sabor in cloud:', err);
+    });
   };
 
   const handleDeleteSabor = (id: string) => {
-    setSabores(prev => prev.filter(s => s.id !== id));
+    const updated = sabores.filter(s => s.id !== id);
+    setSabores(updated);
+    saveSettingsToCloud({ sabores: updated }).catch(err => {
+      console.error('Error deleting sabor from cloud:', err);
+    });
   };
 
   const handleAddExtra = (newExtra: AdicionalExtra) => {
-    setExtras([...extras, newExtra]);
+    const updated = [...extras, newExtra];
+    setExtras(updated);
+    saveSettingsToCloud({ extras: updated }).catch(err => {
+      console.error('Error adding extra to cloud:', err);
+    });
   };
 
   const handleDeleteExtra = (id: string) => {
-    setExtras(extras.filter(e => e.id !== id));
+    const updated = extras.filter(e => e.id !== id);
+    setExtras(updated);
+    saveSettingsToCloud({ extras: updated }).catch(err => {
+      console.error('Error deleting extra from cloud:', err);
+    });
+  };
+
+  const handleUpdateTaxaDoisRecheios = (val: number) => {
+    setTaxaDoisRecheios(val);
+    saveSettingsToCloud({ taxaDoisRecheios: val }).catch(err => {
+      console.error('Error saving taxaDoisRecheios to cloud:', err);
+    });
+  };
+
+  const handleUpdateTaxaSaborEspecial = (val: number) => {
+    setTaxaSaborEspecial(val);
+    saveSettingsToCloud({ taxaSaborEspecial: val }).catch(err => {
+      console.error('Error saving taxaSaborEspecial to cloud:', err);
+    });
+  };
+
+  const handleUpdateTaxaEntrega = (val: number) => {
+    setTaxaEntrega(val);
+    saveSettingsToCloud({ taxaEntrega: val }).catch(err => {
+      console.error('Error saving taxaEntrega to cloud:', err);
+    });
+  };
+
+  const handleUpdatePrecoPiscina = (val: number) => {
+    setPrecoPiscina(val);
+    saveSettingsToCloud({ precoPiscina: val }).catch(err => {
+      console.error('Error saving precoPiscina to cloud:', err);
+    });
+  };
+
+  const handleUpdateImagemBoloDoce = (val: string) => {
+    setImagemBoloDoce(val);
+    saveSettingsToCloud({ imagemBoloDoce: val }).catch(err => {
+      console.error('Error saving imagemBoloDoce to cloud:', err);
+    });
+  };
+
+  const handleUpdateImagemBoloSalgado = (val: string) => {
+    setImagemBoloSalgado(val);
+    saveSettingsToCloud({ imagemBoloSalgado: val }).catch(err => {
+      console.error('Error saving imagemBoloSalgado to cloud:', err);
+    });
+  };
+
+  const handleUpdateImagemBoloPiscina = (val: string) => {
+    setImagemBoloPiscina(val);
+    saveSettingsToCloud({ imagemBoloPiscina: val }).catch(err => {
+      console.error('Error saving imagemBoloPiscina to cloud:', err);
+    });
   };
 
   const handleSaveAllConfig = () => {
@@ -752,11 +868,11 @@ export default function App() {
                     onSaveAll={handleSaveAllConfig}
                     onLogout={handleAdminLogout}
                     taxaDoisRecheios={taxaDoisRecheios}
-                    onUpdateTaxaDoisRecheios={setTaxaDoisRecheios}
+                    onUpdateTaxaDoisRecheios={handleUpdateTaxaDoisRecheios}
                     taxaSaborEspecial={taxaSaborEspecial}
-                    onUpdateTaxaSaborEspecial={setTaxaSaborEspecial}
+                    onUpdateTaxaSaborEspecial={handleUpdateTaxaSaborEspecial}
                     taxaEntrega={taxaEntrega}
-                    onUpdateTaxaEntrega={setTaxaEntrega}
+                    onUpdateTaxaEntrega={handleUpdateTaxaEntrega}
                     tamanhosSalgado={tamanhosSalgado}
                     onUpdateTamanhoSalgado={handleUpdateTamanhoSalgado}
                     saboresPiscina={saboresPiscina}
@@ -764,13 +880,13 @@ export default function App() {
                     onAddSaborPiscina={handleAddSaborPiscina}
                     onDeleteSaborPiscina={handleDeleteSaborPiscina}
                     precoPiscina={precoPiscina}
-                    onUpdatePrecoPiscina={setPrecoPiscina}
+                    onUpdatePrecoPiscina={handleUpdatePrecoPiscina}
                     imagemBoloDoce={imagemBoloDoce}
                     imagemBoloSalgado={imagemBoloSalgado}
                     imagemBoloPiscina={imagemBoloPiscina}
-                    onUpdateImagemBoloDoce={setImagemBoloDoce}
-                    onUpdateImagemBoloSalgado={setImagemBoloSalgado}
-                    onUpdateImagemBoloPiscina={setImagemBoloPiscina}
+                    onUpdateImagemBoloDoce={handleUpdateImagemBoloDoce}
+                    onUpdateImagemBoloSalgado={handleUpdateImagemBoloSalgado}
+                    onUpdateImagemBoloPiscina={handleUpdateImagemBoloPiscina}
                   />
                 </div>
               )}
