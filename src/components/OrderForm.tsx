@@ -9,9 +9,13 @@ interface OrderFormProps {
   onPlaceOrder: (pedido: Omit<Pedido, 'id' | 'codigo' | 'dataCriacao'>) => void;
   taxaDoisRecheios: number;
   taxaSaborEspecial: number;
+  taxaEntrega: number;
   tamanhosSalgado: BoloSalgadoTamanho[];
   saboresPiscina: BoloPiscinaSabor[];
   precoPiscina: number;
+  imagemBoloDoce?: string;
+  imagemBoloSalgado?: string;
+  imagemBoloPiscina?: string;
 }
 
 export default function OrderForm({
@@ -21,9 +25,13 @@ export default function OrderForm({
   onPlaceOrder,
   taxaDoisRecheios,
   taxaSaborEspecial,
+  taxaEntrega,
   tamanhosSalgado,
   saboresPiscina,
-  precoPiscina
+  precoPiscina,
+  imagemBoloDoce,
+  imagemBoloSalgado,
+  imagemBoloPiscina
 }: OrderFormProps) {
   const disponivelSabores = sabores.filter(s => s.status === 'disponivel');
   const disponivelPiscinas = saboresPiscina.filter(s => s.status === 'disponivel');
@@ -157,8 +165,16 @@ export default function OrderForm({
   // Check if flavor is special
   const checkIsEspecial = (sab: BoloSabor | undefined) => {
     if (!sab) return false;
-    const lower = sab.nome.toLowerCase();
-    return lower.includes('kitkat') || lower.includes('nutella') || lower.includes('alpino') || lower.includes('nozes') || sab.precoBase > 180.00;
+    return !!sab.isEspecial;
+  };
+
+  // Get dynamic individualized flavor surcharge
+  const getSaborAdicional = (sab: BoloSabor | undefined) => {
+    if (!sab) return 0;
+    if (sab.isEspecial) {
+      return typeof sab.adicionalPreco === 'number' ? sab.adicionalPreco : taxaSaborEspecial;
+    }
+    return 0;
   };
 
   // Pricing selectors
@@ -182,8 +198,8 @@ export default function OrderForm({
   if (tipoBolo === 'doce') {
     // Standard sweet cake sizes base
     const basePreco = 180.00 + (selectedTamanho ? selectedTamanho.adicionalPreco : 0);
-    const fillingOneAdditional = checkIsEspecial(recheio1) ? taxaSaborEspecial : 0;
-    const fillingTwoAdditional = (quantidadeRecheios === 2 && recheio2 && checkIsEspecial(recheio2)) ? taxaSaborEspecial : 0;
+    const fillingOneAdditional = getSaborAdicional(recheio1);
+    const fillingTwoAdditional = (quantidadeRecheios === 2 && recheio2) ? getSaborAdicional(recheio2) : 0;
     const doubleFillingSurcharge = quantidadeRecheios === 2 ? taxaDoisRecheios : 0;
 
     total = basePreco + fillingOneAdditional + fillingTwoAdditional + doubleFillingSurcharge + extrasPreco;
@@ -199,6 +215,10 @@ export default function OrderForm({
     total = precoPiscina + extrasPreco;
     summaryLabel = 'Bolo Piscina (Tamanho Único)';
     finalSaborNome = selectedPiscinaSabor ? `Bolo Piscina flavor ${selectedPiscinaSabor.nome}` : 'Bolo Piscina';
+  }
+
+  if (tipoEntrega === 'entrega') {
+    total += taxaEntrega;
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -387,9 +407,9 @@ export default function OrderForm({
 
         {tipoEntrega === 'entrega' && (
           <div className="space-y-4 border-t border-outline-variant/10 pt-4 animate-in fade-in duration-300">
-            <div className="bg-[#fffbfa] border border-[#ffdad6] p-3 rounded-lg text-[11px] text-[#ba1a1a] leading-normal flex items-start gap-2">
-              <Info className="w-4 h-4 text-[#ba1a1a] shrink-0 mt-0.5" />
-              <p>🛵 <strong>Atenção:</strong> Por favor, verifique se a Dona Cleusa realiza entregas para a sua região previamente no WhatsApp antes de preencher.</p>
+            <div className="bg-primary-container/15 border border-primary-container/30 p-3 rounded-lg text-[11px] text-[#2c1a00] leading-normal flex items-start gap-2">
+              <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <p>🛵 <strong>Atenção:</strong> As entregas são realizadas exclusivamente na cidade de <strong>São José dos Campos</strong> com uma taxa de entrega fixa de <strong>R$ {taxaEntrega.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> (já somada ao total abaixo).</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -560,40 +580,69 @@ export default function OrderForm({
           <p className="text-[11px] text-on-surface-variant mt-0.5">Escolha o modelo de bolo que deseja encomendar da Dona Cleusa</p>
         </div>
 
-        {/* TABS OF CAKE STYLES */}
-        <div className="flex gap-1 mb-5 bg-surface-container-low p-1 rounded-xl">
+        {/* CATEGORY VISUAL CARDS WITH CUSTOM PHOTOS */}
+        <div id="cake-category-cards" className="grid grid-cols-3 gap-3 mb-6">
           <button
             type="button"
             onClick={() => setTipoBolo('doce')}
-            className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+            className={`group relative flex flex-col items-center justify-end rounded-xl overflow-hidden aspect-[4/5] border-2 transition-all cursor-pointer ${
               tipoBolo === 'doce'
-                ? 'bg-primary text-white shadow-sm'
-                : 'text-on-surface-variant hover:bg-surface-container-high'
+                ? 'border-primary ring-2 ring-primary/25 shadow-md scale-[1.02]'
+                : 'border-transparent opacity-85 hover:opacity-100 hover:scale-[1.01]'
             }`}
           >
-            🍰 Bolo Doce
+            <img 
+              src={imagemBoloDoce || "https://lh3.googleusercontent.com/aida-public/AB6AXuDgm8Ww9FF4UuIIV4mS5CCF1rzWZ-TpARtIhG-Q5ZoiqvPuZ3W2BatsiIeYhoq1LrFPjUqDo5eSLxClwZ2RpmjXLkcHNPkEdYwBIMfod0OKPIhC_7bOnVqRCMp3yF-sLGdAYwqpHfQUChex6La0BHwWe642yGrol6f7Ivq95C9UrNm-D7sDjSXgkJDLrXmf8o4zAMVxdchfs2Y1FK7Xk6hr4y2ODbctk93w0SNa35rHexu3VB-km660W5gljd1HxBd37tUZRYUW7rye"} 
+              alt="Bolo Doce" 
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+            <div className="relative z-10 p-2 text-center w-full">
+              <span className="block text-white text-[11px] font-black uppercase tracking-wide drop-shadow-sm">🍰 Doce</span>
+            </div>
           </button>
+
           <button
             type="button"
             onClick={() => setTipoBolo('salgado')}
-            className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+            className={`group relative flex flex-col items-center justify-end rounded-xl overflow-hidden aspect-[4/5] border-2 transition-all cursor-pointer ${
               tipoBolo === 'salgado'
-                ? 'bg-primary text-white shadow-sm'
-                : 'text-on-surface-variant hover:bg-surface-container-high'
+                ? 'border-primary ring-2 ring-primary/25 shadow-md scale-[1.02]'
+                : 'border-transparent opacity-85 hover:opacity-100 hover:scale-[1.01]'
             }`}
           >
-            🥪 Bolo Salgado
+            <img 
+              src={imagemBoloSalgado || "https://images.unsplash.com/photo-1619860860774-1e2e17343432?w=800&auto=format&fit=crop&q=80"} 
+              alt="Bolo Salgado" 
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+            <div className="relative z-10 p-2 text-center w-full">
+              <span className="block text-white text-[11px] font-black uppercase tracking-wide drop-shadow-sm">🥪 Salgado</span>
+            </div>
           </button>
+
           <button
             type="button"
             onClick={() => setTipoBolo('piscina')}
-            className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+            className={`group relative flex flex-col items-center justify-end rounded-xl overflow-hidden aspect-[4/5] border-2 transition-all cursor-pointer ${
               tipoBolo === 'piscina'
-                ? 'bg-primary text-white shadow-sm'
-                : 'text-on-surface-variant hover:bg-surface-container-high'
+                ? 'border-primary ring-2 ring-primary/25 shadow-md scale-[1.02]'
+                : 'border-transparent opacity-85 hover:opacity-100 hover:scale-[1.01]'
             }`}
           >
-            🌋 Piscina
+            <img 
+              src={imagemBoloPiscina || "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=800&auto=format&fit=crop&q=80"} 
+              alt="Bolo Piscina" 
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+            <div className="relative z-10 p-2 text-center w-full">
+              <span className="block text-white text-[11px] font-black uppercase tracking-wide drop-shadow-sm">🌋 Piscina</span>
+            </div>
           </button>
         </div>
 
@@ -616,7 +665,7 @@ export default function OrderForm({
                   </span>
                   {checkIsEspecial(recheio1) && (
                     <span className="text-white bg-tertiary px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">
-                      ⭐ Especial
+                      ⭐ Especial (+R$ {getSaborAdicional(recheio1).toFixed(2)})
                     </span>
                   )}
                 </div>
@@ -704,9 +753,10 @@ export default function OrderForm({
               >
                 {disponivelSabores.map((sab) => {
                   const isEspecial = checkIsEspecial(sab);
+                  const extraPrice = typeof sab.adicionalPreco === 'number' ? sab.adicionalPreco : taxaSaborEspecial;
                   return (
                     <option key={sab.id} value={sab.id}>
-                      {sab.nome} {isEspecial ? `⭐️ (Especial +R$ ${taxaSaborEspecial})` : '🍰 (Tradicional sem custo)'}
+                      {sab.nome} {isEspecial ? `⭐️ (Especial +R$ ${extraPrice.toFixed(2)})` : '🍰 (Tradicional sem custo)'}
                     </option>
                   );
                 })}
@@ -730,9 +780,10 @@ export default function OrderForm({
                 >
                   {disponivelSabores.map((sab) => {
                     const isEspecial = checkIsEspecial(sab);
+                    const extraPrice = typeof sab.adicionalPreco === 'number' ? sab.adicionalPreco : taxaSaborEspecial;
                     return (
                       <option key={sab.id} value={sab.id}>
-                        {sab.nome} {isEspecial ? `⭐️ (Especial +R$ ${taxaSaborEspecial})` : '🍰 (Tradicional sem custo)'}
+                        {sab.nome} {isEspecial ? `⭐️ (Especial +R$ ${extraPrice.toFixed(2)})` : '🍰 (Tradicional sem custo)'}
                       </option>
                     );
                   })}

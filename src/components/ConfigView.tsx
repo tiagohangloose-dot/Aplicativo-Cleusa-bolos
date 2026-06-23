@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BoloSabor, BoloTamanho, AdicionalExtra, BoloSalgadoTamanho, BoloPiscinaSabor } from '../types';
-import { Cake, Plus, X, Search, SlidersHorizontal, Image, DollarSign, Save, LogOut } from 'lucide-react';
+import { Cake, Plus, X, Search, SlidersHorizontal, Image, DollarSign, Save, LogOut, Trash2 } from 'lucide-react';
 
 interface ConfigViewProps {
   sabores: BoloSabor[];
@@ -8,6 +8,7 @@ interface ConfigViewProps {
   extras: AdicionalExtra[];
   onAddSabor: (sabor: BoloSabor) => void;
   onUpdateSabor: (id: string, updatedFields: Partial<BoloSabor>) => void;
+  onDeleteSabor: (id: string) => void;
   onUpdateTamanho: (id: string, updatedFields: Partial<BoloTamanho>) => void;
   onAddExtra: (extra: AdicionalExtra) => void;
   onDeleteExtra: (id: string) => void;
@@ -17,6 +18,8 @@ interface ConfigViewProps {
   onUpdateTaxaDoisRecheios: (val: number) => void;
   taxaSaborEspecial: number;
   onUpdateTaxaSaborEspecial: (val: number) => void;
+  taxaEntrega: number;
+  onUpdateTaxaEntrega: (val: number) => void;
   tamanhosSalgado: BoloSalgadoTamanho[];
   onUpdateTamanhoSalgado: (id: string, updatedFields: Partial<BoloSalgadoTamanho>) => void;
   saboresPiscina: BoloPiscinaSabor[];
@@ -25,6 +28,12 @@ interface ConfigViewProps {
   onDeleteSaborPiscina: (id: string) => void;
   precoPiscina: number;
   onUpdatePrecoPiscina: (val: number) => void;
+  imagemBoloDoce?: string;
+  imagemBoloSalgado?: string;
+  imagemBoloPiscina?: string;
+  onUpdateImagemBoloDoce?: (val: string) => void;
+  onUpdateImagemBoloSalgado?: (val: string) => void;
+  onUpdateImagemBoloPiscina?: (val: string) => void;
 }
 
 const CAKE_IMAGE_PRESETS = [
@@ -40,6 +49,7 @@ export default function ConfigView({
   extras,
   onAddSabor,
   onUpdateSabor,
+  onDeleteSabor,
   onUpdateTamanho,
   onAddExtra,
   onDeleteExtra,
@@ -49,6 +59,8 @@ export default function ConfigView({
   onUpdateTaxaDoisRecheios,
   taxaSaborEspecial,
   onUpdateTaxaSaborEspecial,
+  taxaEntrega,
+  onUpdateTaxaEntrega,
   tamanhosSalgado,
   onUpdateTamanhoSalgado,
   saboresPiscina,
@@ -56,19 +68,25 @@ export default function ConfigView({
   onAddSaborPiscina,
   onDeleteSaborPiscina,
   precoPiscina,
-  onUpdatePrecoPiscina
+  onUpdatePrecoPiscina,
+  imagemBoloDoce,
+  imagemBoloSalgado,
+  imagemBoloPiscina,
+  onUpdateImagemBoloDoce,
+  onUpdateImagemBoloSalgado,
+  onUpdateImagemBoloPiscina
 }: ConfigViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<'recheios' | 'salgados' | 'piscina' | 'taxas'>('recheios');
   const [searchTerm, setSearchTerm] = useState('');
   
   // New flavor form state
   const [newNome, setNewNome] = useState('');
-  const [newPeso, setNewPeso] = useState('1.5');
-  const [newPreco, setNewPreco] = useState('180.00');
   const [newImgIndex, setNewImgIndex] = useState(0);
   const [customImgUrl, setCustomImgUrl] = useState('');
   const [newTag, setNewTag] = useState<'best-seller' | 'sazonal' | 'none'>('none');
   const [newDescricao, setNewDescricao] = useState('');
+  const [newIsEspecial, setNewIsEspecial] = useState(false);
+  const [newAdicionalPreco, setNewAdicionalPreco] = useState('20.00');
 
   // Add Piscina Flavor
   const [addPiscinaNome, setAddPiscinaNome] = useState('');
@@ -111,12 +129,14 @@ export default function ConfigView({
     const newSaborItem: BoloSabor = {
       id: 'sab-' + Date.now(),
       nome: newNome,
-      pesoPadrao: parseFloat(newPeso) || 1.5,
-      precoBase: parseFloat(newPreco) || 180.00,
+      pesoPadrao: 3.0,
+      precoBase: 180.00,
       imagem: imgToUse,
       status: 'disponivel',
       tag: newTag,
-      descricao: newDescricao.trim() || undefined
+      descricao: newDescricao.trim() || undefined,
+      isEspecial: newIsEspecial,
+      adicionalPreco: newIsEspecial ? (parseFloat(newAdicionalPreco) || 0) : 0
     };
 
     onAddSabor(newSaborItem);
@@ -125,6 +145,8 @@ export default function ConfigView({
     setNewNome('');
     setNewDescricao('');
     setCustomImgUrl('');
+    setNewIsEspecial(false);
+    setNewAdicionalPreco('20.00');
     alert('Sabor cadastrado com sucesso!');
   };
 
@@ -207,6 +229,50 @@ export default function ConfigView({
 
       {activeSubTab === 'recheios' && (
         <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Preços de tamanhos para bolo Doce (igual bolo salgado) */}
+          <section className="p-5 bg-surface-container-lowest rounded-xl shadow-md border border-outline-variant/10 text-on-surface">
+            <h3 className="font-serif italic font-bold text-base text-secondary mb-3">Preços dos Bolos Doces</h3>
+            <p className="text-xs text-on-surface-variant mb-4 leading-relaxed">
+              Configure as opções e os preços de venda dos bolos doces gourmet clássicos por tamanho.
+            </p>
+
+            <div className="space-y-4">
+              {tamanhos.map((tam) => (
+                <div key={tam.id} className="p-3 rounded-lg bg-surface-container-low border border-outline-variant/10 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-xs text-on-surface font-sans">{tam.label}</span>
+                    <span className="text-[10px] bg-white/70 px-2 py-0.5 rounded border text-on-surface-variant font-mono">{tam.fatias}</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[9px] text-on-surface-variant font-bold mb-1 block">Preço de Venda (R$)</label>
+                      <input
+                        className="w-full bg-white rounded-lg p-2 text-xs font-bold text-secondary border border-outline-variant/20 outline-none"
+                        type="number"
+                        step="1"
+                        value={180.00 + tam.adicionalPreco}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0;
+                          onUpdateTamanho(tam.id, { adicionalPreco: val - 180.00 });
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] text-on-surface-variant font-bold mb-1 block">Rendimento</label>
+                      <input
+                        className="w-full bg-white rounded-lg p-2 text-xs border border-outline-variant/20 outline-none"
+                        type="text"
+                        value={tam.fatias}
+                        onChange={(e) => onUpdateTamanho(tam.id, { fatias: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
           {/* Cadastrar Novo Sabor */}
           <section className="p-5 bg-surface-container-lowest rounded-xl shadow-md border border-outline-variant/10">
             <div className="flex items-center gap-3 mb-4">
@@ -275,23 +341,25 @@ export default function ConfigView({
 
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-[10px] font-semibold text-on-surface-variant mb-1">Peso Base (Kg)</label>
-                  <input
-                    className="w-full bg-surface-container-low rounded-lg p-2.5 text-xs border border-outline-variant/20 outline-none"
-                    type="number"
-                    step="0.1"
-                    value={newPeso}
-                    onChange={(e) => setNewPeso(e.target.value)}
-                  />
+                  <label className="block text-[10px] font-semibold text-on-surface-variant mb-1">Tipo de Recheio</label>
+                  <select
+                    className="w-full bg-surface-container-low rounded-lg p-2 text-xs border border-outline-variant/20 outline-none h-[38px] font-semibold"
+                    value={newIsEspecial ? 'especial' : 'normal'}
+                    onChange={(e) => setNewIsEspecial(e.target.value === 'especial')}
+                  >
+                    <option value="normal">🍰 Normal (Sem custo)</option>
+                    <option value="especial">⭐️ Especial (Acréscimo)</option>
+                  </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-semibold text-on-surface-variant mb-1">Preço Base (R$)</label>
+                  <label className="block text-[10px] font-semibold text-on-surface-variant mb-1">Acréscimo R$ (Se Especial)</label>
                   <input
-                    className="w-full bg-surface-container-low rounded-lg p-2.5 text-xs border border-outline-variant/20 outline-none font-bold text-secondary"
+                    className="w-full bg-surface-container-low rounded-lg p-2.5 text-xs border border-outline-variant/20 outline-none font-bold text-secondary disabled:opacity-50"
                     type="number"
                     step="1"
-                    value={newPreco}
-                    onChange={(e) => setNewPreco(e.target.value)}
+                    disabled={!newIsEspecial}
+                    value={newIsEspecial ? newAdicionalPreco : '0.00'}
+                    onChange={(e) => setNewAdicionalPreco(e.target.value)}
                   />
                 </div>
                 <div>
@@ -333,8 +401,7 @@ export default function ConfigView({
             <div className="grid grid-cols-1 gap-3">
               {filteredSabores.map((sab) => {
                 const isEnabled = sab.status === 'disponivel';
-                const lower = sab.nome.toLowerCase();
-                const isEspecialList = lower.includes('kitkat') || lower.includes('nutella') || lower.includes('alpino') || lower.includes('nozes') || sab.precoBase > 180.00;
+                const isEspecialList = !!sab.isEspecial;
                 
                 return (
                   <article
@@ -383,36 +450,53 @@ export default function ConfigView({
                         </div>
                       </div>
 
-                      <label className="relative inline-flex items-center cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          className="sr-only peer"
-                          checked={isEnabled}
-                          onChange={(e) => onUpdateSabor(sab.id, { status: e.target.checked ? 'disponivel' : 'indisponivel' })}
-                        />
-                        <div className="w-9 h-5 bg-outline-variant/40 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                      </label>
+                      <div className="flex items-center gap-2">
+                        <label className="relative inline-flex items-center cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={isEnabled}
+                            onChange={(e) => onUpdateSabor(sab.id, { status: e.target.checked ? 'disponivel' : 'indisponivel' })}
+                          />
+                          <div className="w-9 h-5 bg-outline-variant/40 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`Deseja realmente remover o recheio "${sab.nome}"?`)) {
+                              onDeleteSabor(sab.id);
+                            }
+                          }}
+                          className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 pt-2 border-t border-outline-variant/10">
                       <div>
-                        <span className="text-[9px] text-on-surface-variant font-bold mb-1 block">Rendimento aproximado (kg)</span>
-                        <input
-                          className="w-full bg-surface-container-low/60 rounded-lg p-2 text-xs border border-outline-variant/10 outline-none"
-                          type="number"
-                          step="0.1"
-                          value={sab.pesoPadrao}
-                          onChange={(e) => onUpdateSabor(sab.id, { pesoPadrao: parseFloat(e.target.value) || 1.0 })}
-                        />
+                        <span className="text-[9px] text-on-surface-variant font-bold mb-1 block">Tipo de Recheio</span>
+                        <select
+                          className="w-full bg-surface-container-low/60 rounded-lg p-2 text-xs border border-outline-variant/10 outline-none font-semibold"
+                          value={sab.isEspecial ? 'especial' : 'normal'}
+                          onChange={(e) => onUpdateSabor(sab.id, { isEspecial: e.target.value === 'especial' })}
+                        >
+                          <option value="normal">🍰 Normal (Sem custo)</option>
+                          <option value="especial">⭐️ Especial (Com acréscimo)</option>
+                        </select>
                       </div>
                       <div>
-                        <span className="text-[9px] text-on-surface-variant font-bold mb-1 block">Preço de Referência (R$)</span>
+                        <span className="text-[9px] text-on-surface-variant font-bold mb-1 block">
+                          {sab.isEspecial ? 'Valor de Acréscimo (R$)' : 'Sem custo adicional'}
+                        </span>
                         <input
-                          className="w-full bg-surface-container-low/60 rounded-lg p-2 text-xs border border-outline-variant/10 outline-none font-bold text-secondary"
+                          className="w-full bg-surface-container-low/60 rounded-lg p-2 text-xs border border-outline-variant/10 outline-none font-bold text-secondary disabled:opacity-50"
                           type="number"
                           step="1"
-                          value={sab.precoBase}
-                          onChange={(e) => onUpdateSabor(sab.id, { precoBase: parseFloat(e.target.value) || 180 })}
+                          disabled={!sab.isEspecial}
+                          value={sab.isEspecial ? (sab.adicionalPreco ?? 20) : 0}
+                          onChange={(e) => onUpdateSabor(sab.id, { adicionalPreco: parseFloat(e.target.value) || 0 })}
                         />
                       </div>
                     </div>
@@ -575,6 +659,22 @@ export default function ConfigView({
                   />
                 </div>
               </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                  Taxa de Entrega Fixa (São José dos Campos)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-xs">R$</span>
+                  <input
+                    className="w-full bg-surface-container-low rounded-lg p-3 pl-9 text-xs border border-outline-variant/20 outline-none font-bold text-secondary"
+                    type="number"
+                    step="1"
+                    value={taxaEntrega}
+                    onChange={(e) => onUpdateTaxaEntrega(parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+              </div>
             </div>
           </section>
 
@@ -628,26 +728,32 @@ export default function ConfigView({
             </div>
           </section>
 
-          {/* Acréscimos por tamanho para o bolo Doce Gourmet */}
-          <section className="p-5 bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 text-on-surface">
-            <h3 className="font-serif italic font-bold text-base text-secondary mb-3">Acréscimos por Tamanho (Bolo Doce)</h3>
+          {/* Preços por tamanho para o bolo Doce */}
+          <section className="p-5 bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 text-on-surface animate-in fade-in duration-200">
+            <h3 className="font-serif italic font-bold text-base text-secondary mb-3">Preços dos Bolos Doces</h3>
+            <p className="text-xs text-on-surface-variant mb-4 leading-relaxed">
+              Configure as opções e os preços de venda dos bolos doces gourmet clássicos por tamanho.
+            </p>
             <div className="space-y-4">
               {tamanhos.map((tam) => (
-                <div key={tam.id} className="p-3.5 rounded-xl bg-surface-container-low space-y-2">
+                <div key={tam.id} className="p-3 rounded-lg bg-surface-container-low border border-outline-variant/10 space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-xs text-secondary">{tam.label}</span>
-                    <span className="text-[10px] bg-white/65 px-2 py-0.5 rounded border border-outline-variant/5">{tam.fatias}</span>
+                    <span className="font-semibold text-xs text-on-surface font-sans">{tam.label}</span>
+                    <span className="text-[10px] bg-white/70 px-2 py-0.5 rounded border text-on-surface-variant font-mono">{tam.fatias}</span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[9px] text-on-surface-variant font-bold mb-1 block">Acréscimo R$ (sobre a base R$ 180)</label>
+                      <label className="text-[9px] text-on-surface-variant font-bold mb-1 block">Preço de Venda (R$)</label>
                       <input
-                        className="w-full bg-white rounded-lg p-2 text-xs font-semibold border border-outline-variant/20 outline-none"
+                        className="w-full bg-white rounded-lg p-2 text-xs font-bold text-secondary border border-outline-variant/20 outline-none"
                         type="number"
                         step="1"
-                        value={tam.adicionalPreco}
-                        onChange={(e) => onUpdateTamanho(tam.id, { adicionalPreco: parseFloat(e.target.value) || 0 })}
+                        value={180.00 + tam.adicionalPreco}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0;
+                          onUpdateTamanho(tam.id, { adicionalPreco: val - 180.00 });
+                        }}
                       />
                     </div>
                     <div>
@@ -662,6 +768,114 @@ export default function ConfigView({
                   </div>
                 </div>
               ))}
+            </div>
+          </section>
+
+          {/* Imagens de Capa das Categorias (Item 1) */}
+          <section className="p-5 bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 text-on-surface">
+            <h3 className="font-serif italic font-bold text-base text-secondary mb-3">📸 Imagens de Capa das Categorias</h3>
+            <p className="text-xs text-on-surface-variant mb-4 leading-relaxed">
+              Mude a foto que aparece nas opções da página inicial para Bolo Doce, Bolo Salgado e Bolo Piscina.
+            </p>
+            <div className="space-y-4">
+              {/* Bolo Doce */}
+              <div className="p-3.5 rounded-xl bg-surface-container-low space-y-2">
+                <label className="text-[10px] text-on-surface-variant font-black uppercase block">Capa Bolo Doce</label>
+                <div className="flex gap-2 items-center">
+                  <div className="w-12 h-12 rounded-lg overflow-hidden border bg-white shrink-0">
+                    <img src={imagemBoloDoce} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="URL ou Base64..."
+                    className="flex-1 bg-white rounded-lg p-2.5 text-xs border border-outline-variant/20 outline-none"
+                    value={imagemBoloDoce || ''}
+                    onChange={(e) => onUpdateImagemBoloDoce?.(e.target.value)}
+                  />
+                  <label className="bg-primary/10 text-primary hover:bg-primary/20 text-[10px] font-bold px-3 py-2.5 rounded-lg cursor-pointer transition-colors shrink-0">
+                    Subir Arquivo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => onUpdateImagemBoloDoce?.(ev.target?.result as string);
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Bolo Salgado */}
+              <div className="p-3.5 rounded-xl bg-surface-container-low space-y-2">
+                <label className="text-[10px] text-on-surface-variant font-black uppercase block">Capa Bolo Salgado</label>
+                <div className="flex gap-2 items-center">
+                  <div className="w-12 h-12 rounded-lg overflow-hidden border bg-white shrink-0">
+                    <img src={imagemBoloSalgado} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="URL ou Base64..."
+                    className="flex-1 bg-white rounded-lg p-2.5 text-xs border border-outline-variant/20 outline-none"
+                    value={imagemBoloSalgado || ''}
+                    onChange={(e) => onUpdateImagemBoloSalgado?.(e.target.value)}
+                  />
+                  <label className="bg-primary/10 text-primary hover:bg-primary/20 text-[10px] font-bold px-3 py-2.5 rounded-lg cursor-pointer transition-colors shrink-0">
+                    Subir Arquivo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => onUpdateImagemBoloSalgado?.(ev.target?.result as string);
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Bolo Piscina */}
+              <div className="p-3.5 rounded-xl bg-surface-container-low space-y-2">
+                <label className="text-[10px] text-on-surface-variant font-black uppercase block">Capa Bolo Piscina</label>
+                <div className="flex gap-2 items-center">
+                  <div className="w-12 h-12 rounded-lg overflow-hidden border bg-white shrink-0">
+                    <img src={imagemBoloPiscina} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="URL ou Base64..."
+                    className="flex-1 bg-white rounded-lg p-2.5 text-xs border border-outline-variant/20 outline-none"
+                    value={imagemBoloPiscina || ''}
+                    onChange={(e) => onUpdateImagemBoloPiscina?.(e.target.value)}
+                  />
+                  <label className="bg-primary/10 text-primary hover:bg-primary/20 text-[10px] font-bold px-3 py-2.5 rounded-lg cursor-pointer transition-colors shrink-0">
+                    Subir Arquivo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => onUpdateImagemBoloPiscina?.(ev.target?.result as string);
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
             </div>
           </section>
         </div>

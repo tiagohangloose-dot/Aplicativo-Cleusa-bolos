@@ -31,6 +31,15 @@ import ConfigView from './components/ConfigView';
 import OfficialMenu from './components/OfficialMenu';
 import CleusaLogo from './components/CleusaLogo';
 
+import {
+  listenToSettings,
+  listenToOrders,
+  saveSettingsToCloud,
+  saveOrderToCloud,
+  updateOrderInCloud,
+  deleteOrderFromCloud
+} from './lib/firebase';
+
 export default function App() {
   // 1. Core Databases matching storage specs
   const [sabores, setSabores] = useState<BoloSabor[]>(() => {
@@ -98,6 +107,12 @@ export default function App() {
     return local ? parseFloat(local) : 20.00;
   });
 
+  // Delivery fee for orders demanding delivery service
+  const [taxaEntrega, setTaxaEntrega] = useState<number>(() => {
+    const local = localStorage.getItem('cleusabolos_taxa_entrega');
+    return local ? parseFloat(local) : 20.00;
+  });
+
   // Type cover images for client dynamic customization
   const [imagemBoloDoce, setImagemBoloDoce] = useState<string>(() => {
     return localStorage.getItem('cleusabolos_img_bolo_doce') || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800&auto=format&fit=crop&q=80';
@@ -141,6 +156,10 @@ export default function App() {
   }, [taxaSaborEspecial]);
 
   useEffect(() => {
+    localStorage.setItem('cleusabolos_taxa_entrega', taxaEntrega.toString());
+  }, [taxaEntrega]);
+
+  useEffect(() => {
     localStorage.setItem('cleusabolos_tamanhos_salgado', JSON.stringify(tamanhosSalgado));
   }, [tamanhosSalgado]);
 
@@ -163,6 +182,33 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('cleusabolos_img_bolo_piscina', imagemBoloPiscina);
   }, [imagemBoloPiscina]);
+
+  // Connect real-time Firebase listeners when component mounts
+  useEffect(() => {
+    const unsubSettings = listenToSettings((newSettings) => {
+      setSabores(newSettings.sabores);
+      setExtras(newSettings.extras);
+      setTamanhos(newSettings.tamanhos);
+      setTamanhosSalgado(newSettings.tamanhosSalgado);
+      setSaboresPiscina(newSettings.saboresPiscina);
+      setPrecoPiscina(newSettings.precoPiscina);
+      setTaxaDoisRecheios(newSettings.taxaDoisRecheios);
+      setTaxaSaborEspecial(newSettings.taxaSaborEspecial);
+      setTaxaEntrega(newSettings.taxaEntrega);
+      setImagemBoloDoce(newSettings.imagemBoloDoce);
+      setImagemBoloSalgado(newSettings.imagemBoloSalgado);
+      setImagemBoloPiscina(newSettings.imagemBoloPiscina);
+    });
+
+    const unsubOrders = listenToOrders((loadedOrders) => {
+      setPedidos(loadedOrders);
+    });
+
+    return () => {
+      unsubSettings();
+      unsubOrders();
+    };
+  }, []);
 
   // Handle updating a standard cake size dynamically in editor mode
   const handleUpdateTamanho = (tamanhoId: string, updatedFields: Partial<BoloTamanho>) => {
@@ -191,38 +237,44 @@ export default function App() {
   };
 
   // Handle placing a new custom order in cake customizer mode
-  const handlePlaceOrder = (newOrderFields: Omit<Pedido, 'id' | 'codigo' | 'dataCriacao'>) => {
-    const orderId = 'ord-' + Date.now();
+  const handlePlaceOrder = async (newOrderFields: Omit<Pedido, 'id' | 'codigo' | 'dataCriacao'>) => {
     const orderCode = 'CB-' + Math.floor(1000 + Math.random() * 9000);
-    const newPedido: Pedido = {
+    const newPedidoData = {
       ...newOrderFields,
-      id: orderId,
       codigo: orderCode,
       dataCriacao: new Date().toISOString()
     };
-
-    const updatedPedidos = [newPedido, ...pedidos];
-    setPedidos(updatedPedidos);
-    
-    // Store order ID to remember user placed this order
-    setMeusPedidosIds(prev => [...prev, orderId]);
-
-    setLastPlacedOrder(newPedido);
+    try {
+      const docId = await saveOrderToCloud(newPedidoData);
+      const newPedido: Pedido = { ...newPedidoData, id: docId };
+      setLastPlacedOrder(newPedido);
+      setMeusPedidosIds(prev => [...prev, docId]);
+    } catch (err) {
+      console.error('Error in handlePlaceOrder cloud save, falling back to local:', err);
+      const orderId = 'ord-' + Date.now();
+      const newPedido: Pedido = { ...newPedidoData, id: orderId };
+      setPedidos(prev => [newPedido, ...prev]);
+      setLastPlacedOrder(newPedido);
+      setMeusPedidosIds(prev => [...prev, orderId]);
+    }
   };
 
   // Status alteration for booking lists
   const handleUpdatePedidoStatus = (pedidoId: string, newStatus: Pedido['status']) => {
-    const updated = pedidos.map(p => {
-      if (p.id === pedidoId) {
-        return { ...p, status: newStatus };
-      }
-      return p;
+    // Optimistic local state update
+    setPedidos(prev => prev.map(p => p.id === pedidoId ? { ...p, status: newStatus } : p));
+    updateOrderInCloud(pedidoId, { status: newStatus }).catch(err => {
+      console.error('Error updating status in cloud:', err);
     });
-    setPedidos(updated);
   };
 
   const handleAddManualPedido = (newPedido: Pedido) => {
-    setPedidos([newPedido, ...pedidos]);
+    const { id, ...newPedidoFields } = newPedido;
+    saveOrderToCloud(newPedidoFields).catch(err => {
+      console.error('Error saving manual order to cloud:', err);
+      // Fallback
+      setPedidos(prev => [newPedido, ...prev]);
+    });
   };
 
   const handleDeletePedido = (pedidoId: string) => {
@@ -231,6 +283,9 @@ export default function App() {
     if (lastPlacedOrder && lastPlacedOrder.id === pedidoId) {
       setLastPlacedOrder(null);
     }
+    deleteOrderFromCloud(pedidoId).catch(err => {
+      console.error('Error deleting order from cloud:', err);
+    });
   };
 
   const getHoursUntilDelivery = (ped: Pedido): number => {
@@ -274,15 +329,34 @@ export default function App() {
   };
 
   const handleSaveAllConfig = () => {
-    // Persist completely
+    // Persist completely to LocalStorage as fallback
     localStorage.setItem('cleusabolos_sabores', JSON.stringify(sabores));
     localStorage.setItem('cleusabolos_extras', JSON.stringify(extras));
     localStorage.setItem('cleusabolos_tamanhos', JSON.stringify(tamanhos));
     localStorage.setItem('cleusabolos_taxa_dois_recheios', taxaDoisRecheios.toString());
     localStorage.setItem('cleusabolos_taxa_sabor_especial', taxaSaborEspecial.toString());
+    localStorage.setItem('cleusabolos_taxa_entrega', taxaEntrega.toString());
     localStorage.setItem('cleusabolos_img_bolo_doce', imagemBoloDoce);
     localStorage.setItem('cleusabolos_img_bolo_salgado', imagemBoloSalgado);
     localStorage.setItem('cleusabolos_img_bolo_piscina', imagemBoloPiscina);
+    
+    // Save to Firestore Cloud
+    saveSettingsToCloud({
+      sabores,
+      tamanhos,
+      extras,
+      tamanhosSalgado,
+      saboresPiscina,
+      precoPiscina,
+      taxaDoisRecheios,
+      taxaSaborEspecial,
+      taxaEntrega,
+      imagemBoloDoce,
+      imagemBoloSalgado,
+      imagemBoloPiscina
+    }).catch(err => {
+      console.error('Error saving settings to cloud:', err);
+    });
   };
 
   const handleAdminLogout = () => {
@@ -411,6 +485,7 @@ export default function App() {
                     onPlaceOrder={handlePlaceOrder}
                     taxaDoisRecheios={taxaDoisRecheios}
                     taxaSaborEspecial={taxaSaborEspecial}
+                    taxaEntrega={taxaEntrega}
                     tamanhosSalgado={tamanhosSalgado}
                     saboresPiscina={saboresPiscina}
                     precoPiscina={precoPiscina}
@@ -679,6 +754,8 @@ export default function App() {
                     onUpdateTaxaDoisRecheios={setTaxaDoisRecheios}
                     taxaSaborEspecial={taxaSaborEspecial}
                     onUpdateTaxaSaborEspecial={setTaxaSaborEspecial}
+                    taxaEntrega={taxaEntrega}
+                    onUpdateTaxaEntrega={setTaxaEntrega}
                     tamanhosSalgado={tamanhosSalgado}
                     onUpdateTamanhoSalgado={handleUpdateTamanhoSalgado}
                     saboresPiscina={saboresPiscina}

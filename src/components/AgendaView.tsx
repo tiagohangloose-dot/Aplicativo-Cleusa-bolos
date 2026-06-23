@@ -31,7 +31,7 @@ export default function AgendaView({
   onAddPedido,
   onDeletePedido
 }: AgendaViewProps) {
-  const [activeSegmentFilter, setActiveSegmentFilter] = useState<'fds' | 'proxima' | 'mes'>('fds');
+  const [activeSegmentFilter, setActiveSegmentFilter] = useState<'fds' | 'proxima' | 'mes' | 'entregas'>('fds');
   // Day filter (Sexta, Sábado, Domingo, or All)
   const [selectedDay, setSelectedDay] = useState <'sexta' | 'sabado' | 'domingo'>('sexta');
   
@@ -74,10 +74,28 @@ export default function AgendaView({
   } else if (activeSegmentFilter === 'proxima') {
     // Mock showing any next week items or a wider window
     displayedPedidos = pedidos.filter(p => !['2026-06-26', '2026-06-27', '2026-06-28'].includes(p.data));
+  } else if (activeSegmentFilter === 'entregas') {
+    // Father's delivery list: shows only orders that are ready ('entregue') and are set to delivery ('entrega')
+    displayedPedidos = pedidos.filter(p => p.status === 'entregue' && p.tipoEntrega === 'entrega');
   } else {
     // "Mês" - show all
     displayedPedidos = pedidos;
   }
+
+  // Sort orders: unfinished ('pendente' / 'producao') first, completed ('entregue' or ready) last
+  // BUT for entregas do pai, sort strictly in descending order of date and time (most recent first)
+  const processedPedidos = [...displayedPedidos].sort((a, b) => {
+    if (activeSegmentFilter === 'entregas') {
+      return b.data.localeCompare(a.data) || b.horario.localeCompare(a.horario);
+    }
+    const aReady = a.status === 'entregue' ? 1 : 0;
+    const bReady = b.status === 'entregue' ? 1 : 0;
+    if (aReady !== bReady) {
+      return aReady - bReady; // non-ready first, ready (completed) at the bottom
+    }
+    // Secondary sort: earliest date & time first
+    return a.data.localeCompare(b.data) || a.horario.localeCompare(b.horario);
+  });
 
   const handleOpenWhats = (ped: Pedido) => {
     const text = `Olá ${ped.clienteNome}! Aqui é a Dona Cleusa Bolos. Referente ao seu pedido de ${ped.saborNome} para o dia ${new Date(ped.data + 'T12:00:00').toLocaleDateString('pt-BR')}: o status atual é *${ped.status === 'pendente' ? 'Pendente' : ped.status === 'producao' ? 'Em Produção 👩‍🍳' : 'Entregue / Concluído ✅'}*. Qualquer dúvida nos chame!`;
@@ -179,6 +197,19 @@ export default function AgendaView({
         >
           Filtrar Mês
         </button>
+        <button
+          onClick={() => {
+            setActiveSegmentFilter('entregas');
+            setSelectedDay('sexta');
+          }}
+          className={`flex-1 py-2.5 text-center font-label-md rounded-lg transition-all cursor-pointer font-bold ${
+            activeSegmentFilter === 'entregas'
+              ? 'bg-purple-100 text-purple-950 border border-purple-200 shadow-sm'
+              : 'text-purple-700 hover:text-purple-900 bg-purple-50/40 hover:bg-purple-50/70'
+          }`}
+        >
+          🚚 Entregas do Pai
+        </button>
       </div>
 
       {/* Sub-day Tab Bar (Only active when weekend mode is selected) */}
@@ -219,13 +250,13 @@ export default function AgendaView({
 
       {/* Order Cards Flow */}
       <div className="space-y-4">
-        {displayedPedidos.length === 0 ? (
+        {processedPedidos.length === 0 ? (
           <div className="bg-surface p-8 text-center rounded-xl border border-dashed border-outline-variant/30">
             <ChefHat className="w-8 h-8 text-outline/30 mx-auto mb-2" />
             <p className="text-sm font-sans text-on-surface-variant italic">Nenhuma encomenda registrada para este período.</p>
           </div>
         ) : (
-          displayedPedidos.map((ped) => (
+          processedPedidos.map((ped) => (
             <div
               key={ped.id}
               className="bg-surface-container-lowest rounded-xl p-4 shadow-[0px_4px_25px_rgba(75,54,33,0.04)] border-l-4 border-secondary border-t border-r border-b border-outline-variant/10 flex flex-col gap-3 relative animate-in fade-in-50 duration-300"
@@ -245,7 +276,9 @@ export default function AgendaView({
                   <div className="flex items-center gap-1.5 text-xs text-on-surface-variant mt-0.5">
                     <Clock className="w-3.5 h-3.5" />
                     <span>
-                      {new Date(ped.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short' })},{' '}
+                      {activeSegmentFilter === 'entregas'
+                        ? new Date(ped.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                        : new Date(ped.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short' })}, {' '}
                       {ped.horario}
                     </span>
                     <span className="font-semibold text-[10px] bg-primary-container px-1.5 py-0.5 rounded text-secondary">
@@ -319,11 +352,29 @@ export default function AgendaView({
 
                 {/* Address block if Delivery */}
                 {ped.tipoEntrega === 'entrega' && ped.rua && (
-                  <div className="text-[11px] bg-white/60 border border-outline-variant/10 rounded-lg p-2.5 mt-1 font-sans text-on-surface space-y-0.5 leading-normal">
-                    <p>📍 <strong>CEP:</strong> {ped.cep}</p>
-                    <p>🛣️ <strong>Endereço:</strong> {ped.rua}, Nº {ped.numero}</p>
-                    {ped.complemento && <p>🏢 <strong>Complemento:</strong> {ped.complemento}</p>}
-                    <p>🏘️ <strong>Bairro:</strong> {ped.bairro} - {ped.cidade}/{ped.estado}</p>
+                  <div className={`text-[11px] border rounded-lg p-2.5 mt-1 font-sans text-on-surface space-y-2 leading-normal ${
+                    activeSegmentFilter === 'entregas'
+                      ? 'bg-purple-50/50 border-purple-200/60 shadow-sm'
+                      : 'bg-white/60 border-outline-variant/10'
+                  }`}>
+                    <div className="space-y-0.5">
+                      <p>📍 <strong>CEP:</strong> {ped.cep}</p>
+                      <p>🛣️ <strong>Endereço:</strong> {ped.rua}, Nº {ped.numero}</p>
+                      {ped.complemento && <p>🏢 <strong>Complemento:</strong> {ped.complemento}</p>}
+                      <p>🏘️ <strong>Bairro:</strong> {ped.bairro} - {ped.cidade}/{ped.estado}</p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const query = `${ped.rua}, ${ped.numero}, ${ped.bairro}, ${ped.cidade} - ${ped.estado}`;
+                        const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+                        window.open(url, '_blank');
+                      }}
+                      className="w-full py-2 px-3 rounded-md bg-purple-600 hover:bg-purple-700 text-white font-sans text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                    >
+                      <span>🗺️ Abrir no Google Maps</span>
+                    </button>
                   </div>
                 )}
 

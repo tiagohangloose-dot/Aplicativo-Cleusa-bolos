@@ -8,6 +8,7 @@ export interface BoloSabor {
   status: 'disponivel' | 'indisponivel';
   tag?: 'best-seller' | 'sazonal' | 'none';
   isEspecial?: boolean;
+  adicionalPreco?: number;
 }
 
 export interface BoloTamanho {
