@@ -825,22 +825,6 @@ export default function OrderForm({
 
         {tipoBolo === 'salgado' && (
           <div className="space-y-4 animate-in fade-in duration-300">
-            {/* High quality savory cake showcase image */}
-            <div className="mb-4 rounded-xl overflow-hidden shadow-md aspect-[16/9] relative group">
-              <img
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                src="https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=600&auto=format&fit=crop&q=60"
-                alt="Bolo Salgado Cleusa"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent"></div>
-              <div className="absolute bottom-3 left-3">
-                <span className="text-on-secondary bg-primary/80 backdrop-blur-sm px-2.5 py-1 rounded-full text-[11px] font-semibold tracking-wider uppercase">
-                  Bolo Salgado Clássico
-                </span>
-              </div>
-            </div>
-
             {/* Note listing ingredients of chicken pie */}
             <div className="bg-orange-50/25 p-3.5 rounded-xl border border-orange-100/40 text-xs leading-relaxed text-on-surface font-sans font-medium">
               🍗 Pão de forma super macio, frango cozido e temperado desfiado, purê artesanal, milho verde cozido, coberturas decorativas crocantes de batata palha fina!
