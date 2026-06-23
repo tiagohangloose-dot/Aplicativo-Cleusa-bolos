@@ -78,6 +78,43 @@ export default function ConfigView({
 }: ConfigViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<'recheios' | 'salgados' | 'piscina' | 'taxas'>('recheios');
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Compress image file to keep base64 within firestore document size limits
+  const compressImageFile = (file: File, callback: (base64: string) => void) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        const MAX_DIM = 500;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+          callback(compressedBase64);
+        } else {
+          callback(e.target?.result as string);
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
   
   // New flavor form state
   const [newNome, setNewNome] = useState('');
@@ -95,20 +132,10 @@ export default function ConfigView({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert('A imagem é muito pesada! Por favor, selecione uma de até 2MB.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      if (base64) {
-        setCustomImgUrl(base64);
-        setNewImgIndex(-1);
-      }
-    };
-    reader.readAsDataURL(file);
+    compressImageFile(file, (base64) => {
+      setCustomImgUrl(base64);
+      setNewImgIndex(-1);
+    });
   };
 
   // Adicionais quick form state
@@ -774,9 +801,16 @@ export default function ConfigView({
           {/* Imagens de Capa das Categorias (Item 1) */}
           <section className="p-5 bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 text-on-surface">
             <h3 className="font-serif italic font-bold text-base text-secondary mb-3">📸 Imagens de Capa das Categorias</h3>
-            <p className="text-xs text-on-surface-variant mb-4 leading-relaxed">
+            <p className="text-xs text-on-surface-variant mb-3 leading-relaxed">
               Mude a foto que aparece nas opções da página inicial para Bolo Doce, Bolo Salgado e Bolo Piscina.
             </p>
+
+            {/* Alert banner about saving to all devices */}
+            <div className="bg-amber-500/10 border border-amber-500/20 text-amber-900 rounded-xl p-3 mb-4 text-[11px] leading-relaxed">
+              <span className="font-black block mb-0.5">⚠️ IMPORTANTE PARA OUTROS DISPOSITIVOS:</span>
+              Seja colando um link da internet ou subindo uma imagem do seu computador, você <strong>precisa clicar</strong> no botão <strong className="underline">"Salvar Todo o Cardápio"</strong> (no final desta página) para salvar de verdade e atualizar os celulares de todos os seus clientes!
+            </div>
+
             <div className="space-y-4">
               {/* Bolo Doce */}
               <div className="p-3.5 rounded-xl bg-surface-container-low space-y-2">
@@ -801,9 +835,9 @@ export default function ConfigView({
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (ev) => onUpdateImagemBoloDoce?.(ev.target?.result as string);
-                          reader.readAsDataURL(file);
+                          compressImageFile(file, (base64) => {
+                            onUpdateImagemBoloDoce?.(base64);
+                          });
                         }
                       }}
                     />
@@ -834,9 +868,9 @@ export default function ConfigView({
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (ev) => onUpdateImagemBoloSalgado?.(ev.target?.result as string);
-                          reader.readAsDataURL(file);
+                          compressImageFile(file, (base64) => {
+                            onUpdateImagemBoloSalgado?.(base64);
+                          });
                         }
                       }}
                     />
@@ -867,9 +901,9 @@ export default function ConfigView({
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (ev) => onUpdateImagemBoloPiscina?.(ev.target?.result as string);
-                          reader.readAsDataURL(file);
+                          compressImageFile(file, (base64) => {
+                            onUpdateImagemBoloPiscina?.(base64);
+                          });
                         }
                       }}
                     />

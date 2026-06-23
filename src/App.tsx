@@ -356,6 +356,7 @@ export default function App() {
       imagemBoloPiscina
     }).catch(err => {
       console.error('Error saving settings to cloud:', err);
+      alert('Ops! Ocorreu um erro ao salvar as configurações na nuvem. Verifique sua conexão. Se você tentou subir alguma imagem muito pesada pelo celular ou computador, ela pode ter excedido os limites do banco de dados (máximo 1MB por documento). Tente usar links da internet ou uma imagem mais leve.\nDetalhes do erro: ' + (err instanceof Error ? err.message : String(err)));
     });
   };
 
