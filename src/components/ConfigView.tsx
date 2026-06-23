@@ -36,13 +36,6 @@ interface ConfigViewProps {
   onUpdateImagemBoloPiscina?: (val: string) => void;
 }
 
-const CAKE_IMAGE_PRESETS = [
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuDgm8Ww9FF4UuIIV4mS5CCF1rzWZ-TpARtIhG-Q5ZoiqvPuZ3W2BatsiIeYhoq1LrFPjUqDo5eSLxClwZ2RpmjXLkcHNPkEdYwBIMfod0OKPIhC_7bOnVqRCMp3yF-sLGdAYwqpHfQUChex6La0BHwWe642yGrol6f7Ivq95C9UrNm-D7sDjSXgkJDLrXmf8o4zAMVxdchfs2Y1FK7Xk6hr4y2ODbctk93w0SNa35rHexu3VB-km660W5gljd1HxBd37tUZRYUW7rye',
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuC5ZE1hJZd5eJcNaw2nwTTT2E5Ky9Mo7L9T2wrLRe1M7DO_9td7tTATU0WWjCRbK9PHyQ9pgMgaAP6cukfYgGSPrCYXTamR-o6NK9_xKvmVVytap41dhClVadX4tkzd7oBxLFWQxYtxganAITH2Z_mKWJCps2gNkH8xQRVOOOd5oYSsW-KYeU-SOtH8lf5oSZslPt1VZIhqg9oayJgHkv7yxBWmEzO3EmriDyIdaOuAgrsw0ILXj8qWQ7ZOSuhf36NGAHP78kbRj_Pq',
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuA1wLPPELY9bQTjH0xcYN3A7LfNHJBbQj0M4c7OE35spzpddvxfAgJN2jzpk7sPo1w0FOe1bXCjF_qb6mWv2wBP1lmXwqDIdZs6_96QsNTc-yaO4WNmYBMrhh--5jRZX0qz3-Kb8zGf2XcjtBSrOblD_IajOGlb9R6ZabnXvLRH2LMs1fYdPTDbmq6z_GCsiSEm9ZEIQtU1X5eVFbFIPdWr7Faj3j7-hYu_8keb-ylHpDMWnY4pC7X5dG7miwLIihl2E3D_kokh5AwR',
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuCgk-zF8jvHloVR36zjGRk_XkvjSfe8mMd8_utsNaEAeSGv0mcoewlnIb8NVY7l9K8HgksEoP1OtVwSgm-PlazXmzW7bN0oOkhk-VHfh6l5z6BmwYT27HeLqQYSFcpM8i6tdezQd5T42NOlXuVMJSX2mWu7cpmik8GYkP0Fo4p6AfMO0UREva0TCYCV5W2LJaUAApUTjX9I1EZUakuS7IPoWhzCMyTjYRwXwNkFA5TkVAFGBVkJeauNkElcDwE_EtQh4w1uIMxzFp94'
-];
-
 export default function ConfigView({
   sabores,
   tamanhos,
@@ -118,8 +111,6 @@ export default function ConfigView({
   
   // New flavor form state
   const [newNome, setNewNome] = useState('');
-  const [newImgIndex, setNewImgIndex] = useState(0);
-  const [customImgUrl, setCustomImgUrl] = useState('');
   const [newTag, setNewTag] = useState<'best-seller' | 'sazonal' | 'none'>('none');
   const [newDescricao, setNewDescricao] = useState('');
   const [newIsEspecial, setNewIsEspecial] = useState(false);
@@ -127,16 +118,6 @@ export default function ConfigView({
 
   // Add Piscina Flavor
   const [addPiscinaNome, setAddPiscinaNome] = useState('');
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    compressImageFile(file, (base64) => {
-      setCustomImgUrl(base64);
-      setNewImgIndex(-1);
-    });
-  };
 
   // Adicionais quick form state
   const [addExtraNome, setAddExtraNome] = useState('');
@@ -152,13 +133,12 @@ export default function ConfigView({
       return;
     }
 
-    const imgToUse = customImgUrl.trim() || CAKE_IMAGE_PRESETS[newImgIndex];
     const newSaborItem: BoloSabor = {
       id: 'sab-' + Date.now(),
       nome: newNome,
       pesoPadrao: 3.0,
       precoBase: 180.00,
-      imagem: imgToUse,
+      imagem: '',
       status: 'disponivel',
       tag: newTag,
       descricao: newDescricao.trim() || undefined,
@@ -171,7 +151,6 @@ export default function ConfigView({
     // reset form
     setNewNome('');
     setNewDescricao('');
-    setCustomImgUrl('');
     setNewIsEspecial(false);
     setNewAdicionalPreco('20.00');
     alert('Sabor cadastrado com sucesso!');
@@ -309,41 +288,6 @@ export default function ConfigView({
 
             <form onSubmit={handleAddNewBolo} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-on-surface-variant mb-2">Preset ou Foto</label>
-                <div className="grid grid-cols-4 gap-2 mb-3">
-                  {CAKE_IMAGE_PRESETS.map((url, i) => (
-                    <button
-                      type="button"
-                      key={i}
-                      className={`relative aspect-[4/3] rounded-lg overflow-hidden border-2 cursor-pointer ${
-                        newImgIndex === i && !customImgUrl ? 'border-primary ring-2 ring-primary-container' : 'border-transparent'
-                      }`}
-                      onClick={() => {
-                        setNewImgIndex(i);
-                        setCustomImgUrl('');
-                      }}
-                    >
-                      <img src={url} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    </button>
-                  ))}
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <label className="flex-1 flex flex-col items-center justify-center border border-dashed border-primary/30 rounded-xl py-3 px-4 bg-primary/5 hover:bg-primary/10 transition-all cursor-pointer text-center">
-                      <span className="text-xs font-bold text-primary">Subir do dispositivo (Max 2MB)</span>
-                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                    </label>
-                    {customImgUrl && (
-                      <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-outline-variant/20">
-                        <img src={customImgUrl} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div>
                 <label className="block text-xs font-semibold text-on-surface-variant mb-1">Nome do Recheio</label>
                 <input
                   className="w-full bg-surface-container-low rounded-lg p-3 text-xs border border-outline-variant/20 outline-none"
@@ -439,30 +383,8 @@ export default function ConfigView({
                   >
                     <div className="flex justify-between items-start gap-2 mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-outline-variant/10 group/img">
-                          <img className="w-full h-full object-cover" src={sab.imagem} alt={sab.nome} referrerPolicy="no-referrer" />
-                          <label className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 flex items-center justify-center text-white text-[9px] font-bold cursor-pointer">
-                            Alterar
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                if (file.size > 2 * 1024 * 1024) {
-                                  alert('Imagem muito pesada! Máximo 2MB.');
-                                  return;
-                                }
-                                const reader = new FileReader();
-                                reader.onload = (ev) => {
-                                  const base64 = ev.target?.result as string;
-                                  if (base64) onUpdateSabor(sab.id, { imagem: base64 });
-                                };
-                                reader.readAsDataURL(file);
-                              }}
-                            />
-                          </label>
+                        <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-serif font-black text-xs shrink-0">
+                          {sab.nome.charAt(0).toUpperCase()}
                         </div>
                         <div>
                           <h4 className="font-serif text-sm font-bold text-on-surface flex items-center gap-1.5">
@@ -795,121 +717,6 @@ export default function ConfigView({
                   </div>
                 </div>
               ))}
-            </div>
-          </section>
-
-          {/* Imagens de Capa das Categorias (Item 1) */}
-          <section className="p-5 bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 text-on-surface">
-            <h3 className="font-serif italic font-bold text-base text-secondary mb-3">📸 Imagens de Capa das Categorias</h3>
-            <p className="text-xs text-on-surface-variant mb-3 leading-relaxed">
-              Mude a foto que aparece nas opções da página inicial para Bolo Doce, Bolo Salgado e Bolo Piscina.
-            </p>
-
-            {/* Alert banner about saving to all devices */}
-            <div className="bg-amber-500/10 border border-amber-500/20 text-amber-900 rounded-xl p-3 mb-4 text-[11px] leading-relaxed">
-              <span className="font-black block mb-0.5">⚠️ IMPORTANTE PARA OUTROS DISPOSITIVOS:</span>
-              Seja colando um link da internet ou subindo uma imagem do seu computador, você <strong>precisa clicar</strong> no botão <strong className="underline">"Salvar Todo o Cardápio"</strong> (no final desta página) para salvar de verdade e atualizar os celulares de todos os seus clientes!
-            </div>
-
-            <div className="space-y-4">
-              {/* Bolo Doce */}
-              <div className="p-3.5 rounded-xl bg-surface-container-low space-y-2">
-                <label className="text-[10px] text-on-surface-variant font-black uppercase block">Capa Bolo Doce</label>
-                <div className="flex gap-2 items-center">
-                  <div className="w-12 h-12 rounded-lg overflow-hidden border bg-white shrink-0">
-                    <img src={imagemBoloDoce} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="URL ou Base64..."
-                    className="flex-1 bg-white rounded-lg p-2.5 text-xs border border-outline-variant/20 outline-none"
-                    value={imagemBoloDoce || ''}
-                    onChange={(e) => onUpdateImagemBoloDoce?.(e.target.value)}
-                  />
-                  <label className="bg-primary/10 text-primary hover:bg-primary/20 text-[10px] font-bold px-3 py-2.5 rounded-lg cursor-pointer transition-colors shrink-0">
-                    Subir Arquivo
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          compressImageFile(file, (base64) => {
-                            onUpdateImagemBoloDoce?.(base64);
-                          });
-                        }
-                      }}
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* Bolo Salgado */}
-              <div className="p-3.5 rounded-xl bg-surface-container-low space-y-2">
-                <label className="text-[10px] text-on-surface-variant font-black uppercase block">Capa Bolo Salgado</label>
-                <div className="flex gap-2 items-center">
-                  <div className="w-12 h-12 rounded-lg overflow-hidden border bg-white shrink-0">
-                    <img src={imagemBoloSalgado} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="URL ou Base64..."
-                    className="flex-1 bg-white rounded-lg p-2.5 text-xs border border-outline-variant/20 outline-none"
-                    value={imagemBoloSalgado || ''}
-                    onChange={(e) => onUpdateImagemBoloSalgado?.(e.target.value)}
-                  />
-                  <label className="bg-primary/10 text-primary hover:bg-primary/20 text-[10px] font-bold px-3 py-2.5 rounded-lg cursor-pointer transition-colors shrink-0">
-                    Subir Arquivo
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          compressImageFile(file, (base64) => {
-                            onUpdateImagemBoloSalgado?.(base64);
-                          });
-                        }
-                      }}
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* Bolo Piscina */}
-              <div className="p-3.5 rounded-xl bg-surface-container-low space-y-2">
-                <label className="text-[10px] text-on-surface-variant font-black uppercase block">Capa Bolo Piscina</label>
-                <div className="flex gap-2 items-center">
-                  <div className="w-12 h-12 rounded-lg overflow-hidden border bg-white shrink-0">
-                    <img src={imagemBoloPiscina} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="URL ou Base64..."
-                    className="flex-1 bg-white rounded-lg p-2.5 text-xs border border-outline-variant/20 outline-none"
-                    value={imagemBoloPiscina || ''}
-                    onChange={(e) => onUpdateImagemBoloPiscina?.(e.target.value)}
-                  />
-                  <label className="bg-primary/10 text-primary hover:bg-primary/20 text-[10px] font-bold px-3 py-2.5 rounded-lg cursor-pointer transition-colors shrink-0">
-                    Subir Arquivo
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          compressImageFile(file, (base64) => {
-                            onUpdateImagemBoloPiscina?.(base64);
-                          });
-                        }
-                      }}
-                    />
-                  </label>
-                </div>
-              </div>
             </div>
           </section>
         </div>

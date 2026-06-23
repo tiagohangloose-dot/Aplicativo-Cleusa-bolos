@@ -7,7 +7,7 @@ export const INITIAL_FLAVORS: BoloSabor[] = [
     descricao: 'Recheio cremoso e generoso de brigadeiro de chocolate gourmet. Um clássico irresistível!',
     pesoPadrao: 3.0,
     precoBase: 180.00,
-    imagem: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&auto=format&fit=crop&q=60',
+    imagem: '',
     status: 'disponivel',
     tag: 'best-seller'
   },
@@ -17,7 +17,7 @@ export const INITIAL_FLAVORS: BoloSabor[] = [
     descricao: 'Recheio aveludado feito puramente com leite condensado e o genuíno Leite Ninho.',
     pesoPadrao: 3.0,
     precoBase: 180.00,
-    imagem: 'https://images.unsplash.com/photo-1559181567-c3190cb9959b?w=600&auto=format&fit=crop&q=60',
+    imagem: '',
     status: 'disponivel',
     tag: 'best-seller'
   },
@@ -27,7 +27,7 @@ export const INITIAL_FLAVORS: BoloSabor[] = [
     descricao: 'Uma combinação inesquecível de coco ralado úmido e cremoso com brigadeiro gourmet.',
     pesoPadrao: 3.0,
     precoBase: 180.00,
-    imagem: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=600&auto=format&fit=crop&q=60',
+    imagem: '',
     status: 'disponivel',
     tag: 'none'
   },
@@ -37,7 +37,7 @@ export const INITIAL_FLAVORS: BoloSabor[] = [
     descricao: 'Recheio trufado de morango coberto com raspas finas e generosas de chocolate blend.',
     pesoPadrao: 3.0,
     precoBase: 180.00,
-    imagem: 'https://images.unsplash.com/photo-1557142046-c704a3adf364?w=600&auto=format&fit=crop&q=60',
+    imagem: '',
     status: 'disponivel',
     tag: 'none'
   },
@@ -47,7 +47,7 @@ export const INITIAL_FLAVORS: BoloSabor[] = [
     descricao: 'Recheio cremoso tradicional de coco ralado cozido lentamente, doce e delicioso.',
     pesoPadrao: 3.0,
     precoBase: 180.00,
-    imagem: 'https://images.unsplash.com/photo-1559622214-f8a98509db7b?w=600&auto=format&fit=crop&q=60',
+    imagem: '',
     status: 'disponivel',
     tag: 'none'
   },
@@ -57,7 +57,7 @@ export const INITIAL_FLAVORS: BoloSabor[] = [
     descricao: 'Textura acetinada de baunilha belga de alta confeitaria, leve e muito saborosa.',
     pesoPadrao: 3.0,
     precoBase: 180.00,
-    imagem: 'https://images.unsplash.com/photo-1519869325930-281384150729?w=600&auto=format&fit=crop&q=60',
+    imagem: '',
     status: 'disponivel',
     tag: 'none'
   },
@@ -67,7 +67,7 @@ export const INITIAL_FLAVORS: BoloSabor[] = [
     descricao: 'Mousse de chocolate blend aerada de extrema cremosidade e sabor acentuado de cacau.',
     pesoPadrao: 3.0,
     precoBase: 180.00,
-    imagem: 'https://images.unsplash.com/photo-1541783245831-57d6fb0926d3?w=600&auto=format&fit=crop&q=60',
+    imagem: '',
     status: 'disponivel',
     tag: 'none'
   },
@@ -77,7 +77,7 @@ export const INITIAL_FLAVORS: BoloSabor[] = [
     descricao: 'Doce de leite cozido artesanalmente no ponto ideal da colher, super suave e nobre.',
     pesoPadrao: 3.0,
     precoBase: 180.00,
-    imagem: 'https://images.unsplash.com/photo-1587314168485-3236d6710814?w=600&auto=format&fit=crop&q=60',
+    imagem: '',
     status: 'disponivel',
     tag: 'none'
   },
@@ -87,7 +87,7 @@ export const INITIAL_FLAVORS: BoloSabor[] = [
     descricao: 'O legítimo e irresistível creme de avelã Nutella pura em abundância no seu recheio.',
     pesoPadrao: 3.0,
     precoBase: 200.00,
-    imagem: 'https://images.unsplash.com/photo-1541783245831-57d6fb0926d3?w=600&auto=format&fit=crop&q=60',
+    imagem: '',
     status: 'disponivel',
     tag: 'sazonal',
     isEspecial: true
@@ -98,7 +98,7 @@ export const INITIAL_FLAVORS: BoloSabor[] = [
     descricao: 'Doce de leite caseiro com pedaços graúdos de nozes chilenas selecionadas e crocantes.',
     pesoPadrao: 3.0,
     precoBase: 200.00,
-    imagem: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=600&auto=format&fit=crop&q=60',
+    imagem: '',
     status: 'disponivel',
     tag: 'sazonal',
     isEspecial: true
