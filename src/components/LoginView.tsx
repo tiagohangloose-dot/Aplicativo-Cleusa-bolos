@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { User, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import CleusaLogo from './CleusaLogo';
 
 interface LoginViewProps {
   onSuccessLogin: () => void;
@@ -29,14 +30,7 @@ export default function LoginView({ onSuccessLogin }: LoginViewProps) {
         
         {/* Brand Section */}
         <div className="mb-6 text-center">
-          <div className="w-24 h-24 mb-3 mx-auto overflow-hidden rounded-full border-2 border-primary-container p-1 bg-white flex items-center justify-center">
-            <img
-              alt="Cleusa Bolos circular logo" 
-              className="w-[90%] h-[90%] object-contain" 
-              src="https://lh3.googleusercontent.com/aida/AP1WRLsqRWCaKEwqdilIzW9bIHyAuvWIiSFnM4GKkYlHCfqLEbMcjPAmTHvNWlT2s9274p_L4ULWhP-Vz7_tqB7-M---rb2Rq-dCQj47TDjhxymftLwxg76Zp9UyIB6B8CdJNkkBXZlnvIMqp3ZhZR_Aip4sMVsRyLdczK5wGupB7H8ynkWviRWYHH006-CFFpsu37Z6O-7Rk_4-XXaBXiDxBeTM9jv67igYIa45_GQ7u9AMttJT6_HKpf_D2-d_" 
-              referrerPolicy="no-referrer"
-            />
-          </div>
+          <CleusaLogo variant="badge" className="w-24 h-24 mb-3 mx-auto" />
           <h1 className="font-serif text-2xl font-bold text-primary mb-1">Painel Administrativo</h1>
           <p className="font-sans text-xs text-on-surface-variant px-4 leading-normal">
             Bem-vinda de volta, Cleusa! Gerencie suas encomendas com carinho.

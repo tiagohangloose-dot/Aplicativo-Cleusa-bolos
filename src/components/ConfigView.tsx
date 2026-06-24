@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { BoloSabor, BoloTamanho, AdicionalExtra, BoloSalgadoTamanho, BoloPiscinaSabor } from '../types';
 import { Cake, Plus, X, Search, SlidersHorizontal, Image, DollarSign, Save, LogOut, Trash2 } from 'lucide-react';
 
+const DEFAULT_DOCE = 'https://lh3.googleusercontent.com/aida-public/AB6AXuDgm8Ww9FF4UuIIV4mS5CCF1rzWZ-TpARtIhG-Q5ZoiqvPuZ3W2BatsiIeYhoq1LrFPjUqDo5eSLxClwZ2RpmjXLkcHNPkEdYwBIMfod0OKPIhC_7bOnVqRCMp3yF-sLGdAYwqpHfQUChex6La0BHwWe642yGrol6f7Ivq95C9UrNm-D7sDjSXgkJDLrXmf8o4zAMVxdchfs2Y1FK7Xk6hr4y2ODbctk93w0SNa35rHexu3VB-km660W5gljd1HxBd37tUZRYUW7rye';
+const DEFAULT_SALGADO = 'https://images.unsplash.com/photo-1619860860774-1e2e17343432?w=800&auto=format&fit=crop&q=80';
+const DEFAULT_PISCINA = 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=800&auto=format&fit=crop&q=80';
+
 interface ConfigViewProps {
   sabores: BoloSabor[];
   tamanhos: BoloTamanho[];
@@ -69,7 +73,7 @@ export default function ConfigView({
   onUpdateImagemBoloSalgado,
   onUpdateImagemBoloPiscina
 }: ConfigViewProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'recheios' | 'salgados' | 'piscina' | 'taxas'>('recheios');
+  const [activeSubTab, setActiveSubTab] = useState<'recheios' | 'salgados' | 'piscina' | 'taxas' | 'capas'>('recheios');
   const [searchTerm, setSearchTerm] = useState('');
 
   // Compress image file to keep base64 within firestore document size limits
@@ -230,6 +234,15 @@ export default function ConfigView({
           }`}
         >
           🏷️ Taxas & Extras
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('capas')}
+          className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all whitespace-nowrap whitespace-nowrap cursor-pointer text-center ${
+            activeSubTab === 'capas' ? 'bg-secondary text-white shadow-sm' : 'text-on-surface-variant hover:bg-surface-container-high'
+          }`}
+        >
+          🖼️ Imagens
         </button>
       </div>
 
@@ -717,6 +730,193 @@ export default function ConfigView({
                   </div>
                 </div>
               ))}
+            </div>
+          </section>
+        </div>
+      )}
+
+      {activeSubTab === 'capas' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <section className="p-5 bg-surface-container-lowest rounded-xl shadow-md border border-outline-variant/10 text-on-surface">
+            <h3 className="font-serif italic font-bold text-base text-secondary mb-3">Imagens de Capa do Cardápio</h3>
+            <p className="text-xs text-on-surface-variant mb-6 leading-relaxed">
+              Altere as imagens que aparecem no início do formulário de pedidos para cada tipo de bolo. Você pode colar o link de uma imagem da internet ou fazer o upload de uma foto do celular/computador (ela será comprimida automaticamente para economizar espaço e carregar instantaneamente).
+            </p>
+
+            <div className="space-y-6">
+              {/* Imagem Bolo Doce */}
+              <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/10 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-sm text-on-surface font-sans">🍰 Bolo Doce</span>
+                </div>
+                
+                <div className="flex gap-4 items-start">
+                  <div className="w-24 h-24 rounded-lg bg-surface-container-high border border-outline-variant/20 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    {imagemBoloDoce ? (
+                      <img src={imagemBoloDoce} alt="Bolo Doce" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <span className="text-[10px] text-on-surface-variant">Sem Imagem</span>
+                    )}
+                  </div>
+                  
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <label className="text-[10px] text-on-surface-variant font-bold mb-1 block">Link da Imagem (URL)</label>
+                      <input
+                        type="text"
+                        className="w-full bg-white rounded-lg p-2 text-xs border border-outline-variant/20 outline-none"
+                        placeholder="Cole a URL da imagem..."
+                        value={imagemBoloDoce || ''}
+                        onChange={(e) => onUpdateImagemBoloDoce?.(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <label className="bg-primary text-white py-1.5 px-3 rounded-lg text-xs font-semibold hover:bg-opacity-95 cursor-pointer flex items-center justify-center gap-1">
+                        <Image className="w-3.5 h-3.5" />
+                        <span>Upload Foto</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              compressImageFile(file, (base64) => {
+                                onUpdateImagemBoloDoce?.(base64);
+                              });
+                            }
+                          }}
+                        />
+                      </label>
+                      
+                      <button
+                        type="button"
+                        onClick={() => onUpdateImagemBoloDoce?.(DEFAULT_DOCE)}
+                        className="bg-outline-variant/20 hover:bg-outline-variant/45 text-on-surface-variant py-1.5 px-3 rounded-lg text-xs font-semibold"
+                      >
+                        Padrão
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Imagem Bolo Salgado */}
+              <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/10 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-sm text-on-surface font-sans">🥪 Bolo Salgado</span>
+                </div>
+                
+                <div className="flex gap-4 items-start">
+                  <div className="w-24 h-24 rounded-lg bg-surface-container-high border border-outline-variant/20 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    {imagemBoloSalgado ? (
+                      <img src={imagemBoloSalgado} alt="Bolo Salgado" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <span className="text-[10px] text-on-surface-variant">Sem Imagem</span>
+                    )}
+                  </div>
+                  
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <label className="text-[10px] text-on-surface-variant font-bold mb-1 block">Link da Imagem (URL)</label>
+                      <input
+                        type="text"
+                        className="w-full bg-white rounded-lg p-2 text-xs border border-outline-variant/20 outline-none"
+                        placeholder="Cole a URL da imagem..."
+                        value={imagemBoloSalgado || ''}
+                        onChange={(e) => onUpdateImagemBoloSalgado?.(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <label className="bg-primary text-white py-1.5 px-3 rounded-lg text-xs font-semibold hover:bg-opacity-95 cursor-pointer flex items-center justify-center gap-1">
+                        <Image className="w-3.5 h-3.5" />
+                        <span>Upload Foto</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              compressImageFile(file, (base64) => {
+                                onUpdateImagemBoloSalgado?.(base64);
+                              });
+                            }
+                          }}
+                        />
+                      </label>
+                      
+                      <button
+                        type="button"
+                        onClick={() => onUpdateImagemBoloSalgado?.(DEFAULT_SALGADO)}
+                        className="bg-outline-variant/20 hover:bg-outline-variant/45 text-on-surface-variant py-1.5 px-3 rounded-lg text-xs font-semibold"
+                      >
+                        Padrão
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Imagem Bolo Piscina */}
+              <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/10 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-sm text-on-surface font-sans">🌋 Bolo Piscina</span>
+                </div>
+                
+                <div className="flex gap-4 items-start">
+                  <div className="w-24 h-24 rounded-lg bg-surface-container-high border border-outline-variant/20 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    {imagemBoloPiscina ? (
+                      <img src={imagemBoloPiscina} alt="Bolo Piscina" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <span className="text-[10px] text-on-surface-variant">Sem Imagem</span>
+                    )}
+                  </div>
+                  
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <label className="text-[10px] text-on-surface-variant font-bold mb-1 block">Link da Imagem (URL)</label>
+                      <input
+                        type="text"
+                        className="w-full bg-white rounded-lg p-2 text-xs border border-outline-variant/20 outline-none"
+                        placeholder="Cole a URL da imagem..."
+                        value={imagemBoloPiscina || ''}
+                        onChange={(e) => onUpdateImagemBoloPiscina?.(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <label className="bg-primary text-white py-1.5 px-3 rounded-lg text-xs font-semibold hover:bg-opacity-95 cursor-pointer flex items-center justify-center gap-1">
+                        <Image className="w-3.5 h-3.5" />
+                        <span>Upload Foto</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              compressImageFile(file, (base64) => {
+                                onUpdateImagemBoloPiscina?.(base64);
+                              });
+                            }
+                          }}
+                        />
+                      </label>
+                      
+                      <button
+                        type="button"
+                        onClick={() => onUpdateImagemBoloPiscina?.(DEFAULT_PISCINA)}
+                        className="bg-outline-variant/20 hover:bg-outline-variant/45 text-on-surface-variant py-1.5 px-3 rounded-lg text-xs font-semibold"
+                      >
+                        Padrão
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
         </div>

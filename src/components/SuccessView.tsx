@@ -265,7 +265,7 @@ ${pedido.massa ? `*Massa:* ${pedido.massa === 'preta' ? 'Preta (Chocolate) 🍫'
           <span>🚨</span> IMPORTANTE: SEU PEDIDO NÃO ESTÁ CONFIRMADO AINDA!
         </div>
         <p className="font-medium">
-          Dona Cleusa precisa receber a mensagem no WhatsApp para iniciar a produção do bolo. Por favor, clique no botão <strong className="underline text-amber-950">"Enviar Pedido para o WhatsApp da Mãe"</strong> abaixo e clique em "Enviar" no aplicativo do WhatsApp.
+          Dona Cleusa precisa receber a mensagem no WhatsApp para iniciar a produção do bolo. Por favor, clique no botão <strong className="underline text-amber-950">"Enviar para o WhatsApp Cleusa Bolos"</strong> abaixo e clique em "Enviar" no aplicativo do WhatsApp.
         </p>
       </div>
 
@@ -276,7 +276,7 @@ ${pedido.massa ? `*Massa:* ${pedido.massa === 'preta' ? 'Preta (Chocolate) 🍫'
           className="w-full h-14 bg-tertiary text-white font-label-md rounded-full flex items-center justify-center gap-2 shadow-md hover:bg-tertiary/90 active:scale-95 transition-all cursor-pointer border border-tertiary/10 font-bold"
         >
           <Send className="w-5 h-5 fill-white text-tertiary" />
-          <span>Enviar Pedido para o WhatsApp da Mãe</span>
+          <span>Enviar para o WhatsApp Cleusa Bolos</span>
         </button>
 
         <button
