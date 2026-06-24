@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { initializeFirestore, collection, doc, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDocFromServer } from 'firebase/firestore';
+import { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDocFromServer } from 'firebase/firestore';
 import { Pedido, BoloSabor, BoloTamanho, AdicionalExtra, BoloSalgadoTamanho, BoloPiscinaSabor } from '../types';
 import {
   INITIAL_FLAVORS,
@@ -26,7 +26,7 @@ const databaseId = (import.meta as any).env?.VITE_FIREBASE_DATABASE_ID || fireba
 const app = initializeApp(firebaseConfig);
 
 // Initialize Firestore with the database ID
-export const db = initializeFirestore(app, {}, databaseId);
+export const db = getFirestore(app, databaseId);
 
 // Error Handling Infrastructure
 export enum OperationType {
@@ -182,7 +182,11 @@ export function listenToOrders(onSync: (orders: Pedido[]) => void) {
       } as Pedido);
     });
     // Sort orders by creation date (descending) so latest orders appear first
-    list.sort((a, b) => new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime());
+    list.sort((a, b) => {
+      const timeA = a.dataCriacao ? new Date(a.dataCriacao).getTime() : 0;
+      const timeB = b.dataCriacao ? new Date(b.dataCriacao).getTime() : 0;
+      return timeB - timeA;
+    });
     onSync(list);
   }, (err) => {
     console.error('Error listening to Orders collection:', err);

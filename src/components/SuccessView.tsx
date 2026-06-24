@@ -305,21 +305,15 @@ ${pedido.massa ? `*Massa:* ${pedido.massa === 'preta' ? 'Preta (Chocolate) 🍫'
               {customMessage}
             </div>
 
-            <p className="text-[10px] text-tertiary mt-2">💡 Dica: Você pode copiar o texto acima e enviar para a Cleusa!</p>
+            <p className="text-[10px] text-tertiary mt-2">💡 Dica: Clique no botão abaixo para abrir diretamente o WhatsApp de Dona Cleusa (+55 12 98827-5469).</p>
 
             <div className="mt-5 flex gap-2">
               <button
-                onClick={() => {
-                  try {
-                    navigator.clipboard.writeText(customMessage);
-                    alert("Mensagem copiada para a área de transferência!");
-                  } catch (e) {
-                    // Fallback
-                  }
-                }}
-                className="flex-1 py-3 bg-secondary text-white text-xs font-semibold rounded-lg hover:bg-secondary/90 transition-all cursor-pointer"
+                onClick={handleWhatsAppAction}
+                className="flex-1 py-3 bg-tertiary text-white text-xs font-bold rounded-lg hover:bg-tertiary/90 transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
-                Copiar Mensagem
+                <Send className="w-3.5 h-3.5 fill-white text-tertiary" />
+                <span>Enviar no WhatsApp</span>
               </button>
               <button
                 onClick={() => setShowSimulatedMessage(false)}
