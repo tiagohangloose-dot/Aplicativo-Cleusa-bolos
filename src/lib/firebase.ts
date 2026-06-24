@@ -42,10 +42,38 @@ const databaseId = (import.meta as any).env?.VITE_FIREBASE_DATABASE_ID || fireba
 
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore with settings to ignore undefined properties and target the specific database
-export const db = initializeFirestore(app, {
+// Initialize mutable activeDb variable which will be proxied
+let activeDb = initializeFirestore(app, {
   ignoreUndefinedProperties: true
 }, databaseId);
+
+// Track if we have already fallen back to (default) to avoid loops
+let hasFallenBack = false;
+
+// Function to safely swap the active database instance to (default)
+export function fallbackToDefaultDatabase() {
+  if (hasFallenBack) return;
+  hasFallenBack = true;
+  console.warn("⚠️ [Firebase] Auto-switching Firestore from custom database ID to (default)...");
+  activeDb = initializeFirestore(app, {
+    ignoreUndefinedProperties: true
+  });
+}
+
+// Export db as a Dynamic Proxy forwarding everything to the active database instance.
+// This allows hot-swapping the database on the fly without breaking external modules importing 'db' on load.
+export const db = new Proxy({}, {
+  get(target, prop, receiver) {
+    const value = Reflect.get(activeDb, prop);
+    if (typeof value === 'function') {
+      return value.bind(activeDb);
+    }
+    return value;
+  },
+  set(target, prop, value, receiver) {
+    return Reflect.set(activeDb, prop, value);
+  }
+}) as any;
 
 // Error Handling Infrastructure
 export enum OperationType {
@@ -85,17 +113,25 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-// 2. Validate connection on app startup
-async function testConnection() {
+// 2. Validate connection on app startup and heal if needed
+async function testAndHealConnection() {
   try {
     const testDocRef = doc(db, 'settings', 'cleusa_config');
     await getDocFromServer(testDocRef);
     console.log("🔥 [Firebase] Conexão com o Firestore estabelecida com sucesso!");
-  } catch (error) {
-    console.error("❌ [Firebase] Erro de Conexão/Permissão na inicialização do Firestore:", error);
+  } catch (error: any) {
+    console.warn("❌ [Firebase] Erro de Conexão na inicialização. Forçando fallback para '(default)'... Detalhe:", error?.message || error);
+    fallbackToDefaultDatabase();
+    try {
+      const testDocRefDefault = doc(db, 'settings', 'cleusa_config');
+      await getDocFromServer(testDocRefDefault);
+      console.log("🔥 [Firebase] Conexão com o banco (default) recuperada com sucesso!");
+    } catch (fallbackErr) {
+      console.error("❌ [Firebase] Erro persistente mesmo no banco (default):", fallbackErr);
+    }
   }
 }
-testConnection();
+testAndHealConnection();
 
 // Dynamic cover image fallbacks to preserve visual presets
 const defaultImgDoce = 'https://lh3.googleusercontent.com/aida-public/AB6AXuDgm8Ww9FF4UuIIV4mS5CCF1rzWZ-TpARtIhG-Q5ZoiqvPuZ3W2BatsiIeYhoq1LrFPjUqDo5eSLxClwZ2RpmjXLkcHNPkEdYwBIMfod0OKPIhC_7bOnVqRCMp3yF-sLGdAYwqpHfQUChex6La0BHwWe642yGrol6f7Ivq95C9UrNm-D7sDjSXgkJDLrXmf8o4zAMVxdchfs2Y1FK7Xk6hr4y2ODbctk93w0SNa35rHexu3VB-km660W5gljd1HxBd37tUZRYUW7rye';
@@ -125,52 +161,67 @@ const PEDIDOS_COLLECTION = 'pedidos';
  * Sync App settings from Firestore. If document doesn't exist, it seeds it automatically with INITIAL data.
  */
 export function listenToSettings(onSync: (settings: AppSettings) => void) {
-  const docRef = doc(db, SETTINGS_COLLECTION, SETTINGS_DOC_ID);
+  let unsubscribe: (() => void) | null = null;
 
-  return onSnapshot(docRef, async (snapshot) => {
-    try {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        onSync({
-          sabores: data.sabores || INITIAL_FLAVORS,
-          tamanhos: data.tamanhos || INITIAL_SIZES,
-          extras: data.extras || INITIAL_EXTRAS,
-          tamanhosSalgado: data.tamanhosSalgado || INITIAL_SALGADO_SIZES,
-          saboresPiscina: data.saboresPiscina || INITIAL_PISCINA_SABORES,
-          precoPiscina: typeof data.precoPiscina === 'number' ? data.precoPiscina : INITIAL_PISCINA_PRECO,
-          taxaDoisRecheios: typeof data.taxaDoisRecheios === 'number' ? data.taxaDoisRecheios : 25.00,
-          taxaSaborEspecial: typeof data.taxaSaborEspecial === 'number' ? data.taxaSaborEspecial : 20.00,
-          taxaEntrega: typeof data.taxaEntrega === 'number' ? data.taxaEntrega : 20.00,
-          imagemBoloDoce: data.imagemBoloDoce || defaultImgDoce,
-          imagemBoloSalgado: data.imagemBoloSalgado || defaultImgSalgado,
-          imagemBoloPiscina: data.imagemBoloPiscina || defaultImgPiscina
-        });
-      } else {
-        // Seed initial settings document safely
-        const initialSettings: AppSettings = {
-          sabores: INITIAL_FLAVORS,
-          tamanhos: INITIAL_SIZES,
-          extras: INITIAL_EXTRAS,
-          tamanhosSalgado: INITIAL_SALGADO_SIZES,
-          saboresPiscina: INITIAL_PISCINA_SABORES,
-          precoPiscina: INITIAL_PISCINA_PRECO,
-          taxaDoisRecheios: 25.0,
-          taxaSaborEspecial: 20.0,
-          taxaEntrega: 20.0,
-          imagemBoloDoce: defaultImgDoce,
-          imagemBoloSalgado: defaultImgSalgado,
-          imagemBoloPiscina: defaultImgPiscina
-        };
-        await setDoc(docRef, initialSettings);
-        onSync(initialSettings);
+  function startListener() {
+    const docRef = doc(db, SETTINGS_COLLECTION, SETTINGS_DOC_ID);
+
+    unsubscribe = onSnapshot(docRef, async (snapshot) => {
+      try {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          onSync({
+            sabores: data.sabores || INITIAL_FLAVORS,
+            tamanhos: data.tamanhos || INITIAL_SIZES,
+            extras: data.extras || INITIAL_EXTRAS,
+            tamanhosSalgado: data.tamanhosSalgado || INITIAL_SALGADO_SIZES,
+            saboresPiscina: data.saboresPiscina || INITIAL_PISCINA_SABORES,
+            precoPiscina: typeof data.precoPiscina === 'number' ? data.precoPiscina : INITIAL_PISCINA_PRECO,
+            taxaDoisRecheios: typeof data.taxaDoisRecheios === 'number' ? data.taxaDoisRecheios : 25.00,
+            taxaSaborEspecial: typeof data.taxaSaborEspecial === 'number' ? data.taxaSaborEspecial : 20.00,
+            taxaEntrega: typeof data.taxaEntrega === 'number' ? data.taxaEntrega : 20.00,
+            imagemBoloDoce: data.imagemBoloDoce || defaultImgDoce,
+            imagemBoloSalgado: data.imagemBoloSalgado || defaultImgSalgado,
+            imagemBoloPiscina: data.imagemBoloPiscina || defaultImgPiscina
+          });
+        } else {
+          // Seed initial settings document safely
+          const initialSettings: AppSettings = {
+            sabores: INITIAL_FLAVORS,
+            tamanhos: INITIAL_SIZES,
+            extras: INITIAL_EXTRAS,
+            tamanhosSalgado: INITIAL_SALGADO_SIZES,
+            saboresPiscina: INITIAL_PISCINA_SABORES,
+            precoPiscina: INITIAL_PISCINA_PRECO,
+            taxaDoisRecheios: 25.0,
+            taxaSaborEspecial: 20.0,
+            taxaEntrega: 20.0,
+            imagemBoloDoce: defaultImgDoce,
+            imagemBoloSalgado: defaultImgSalgado,
+            imagemBoloPiscina: defaultImgPiscina
+          };
+          await setDoc(docRef, initialSettings);
+          onSync(initialSettings);
+        }
+      } catch (err) {
+        console.error('Error in settings listener execution:', err);
       }
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, `${SETTINGS_COLLECTION}/${SETTINGS_DOC_ID}`);
-    }
-  }, (err) => {
-    console.error('Error listening to Settings:', err);
-    handleFirestoreError(err, OperationType.GET, `${SETTINGS_COLLECTION}/${SETTINGS_DOC_ID}`);
-  });
+    }, (err) => {
+      console.error('Error listening to Settings:', err);
+      if (!hasFallenBack) {
+        fallbackToDefaultDatabase();
+        if (unsubscribe) unsubscribe();
+        setTimeout(startListener, 100);
+      } else {
+        handleFirestoreError(err, OperationType.GET, `${SETTINGS_COLLECTION}/${SETTINGS_DOC_ID}`);
+      }
+    });
+  }
+
+  startListener();
+  return () => {
+    if (unsubscribe) unsubscribe();
+  };
 }
 
 /**
@@ -190,27 +241,42 @@ export async function saveSettingsToCloud(updatedSettings: Partial<AppSettings>)
  * Real-time orders synchronization from Cloud
  */
 export function listenToOrders(onSync: (orders: Pedido[]) => void) {
-  const colRef = collection(db, PEDIDOS_COLLECTION);
+  let unsubscribe: (() => void) | null = null;
 
-  return onSnapshot(colRef, (snapshot) => {
-    const list: Pedido[] = [];
-    snapshot.forEach((docSnap) => {
-      list.push({
-        id: docSnap.id,
-        ...docSnap.data()
-      } as Pedido);
+  function startListener() {
+    const colRef = collection(db, PEDIDOS_COLLECTION);
+
+    unsubscribe = onSnapshot(colRef, (snapshot) => {
+      const list: Pedido[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push({
+          id: docSnap.id,
+          ...docSnap.data()
+        } as Pedido);
+      });
+      // Sort orders by creation date (descending) so latest orders appear first
+      list.sort((a, b) => {
+        const timeA = a.dataCriacao ? new Date(a.dataCriacao).getTime() : 0;
+        const timeB = b.dataCriacao ? new Date(b.dataCriacao).getTime() : 0;
+        return timeB - timeA;
+      });
+      onSync(list);
+    }, (err) => {
+      console.error('Error listening to Orders collection:', err);
+      if (!hasFallenBack) {
+        fallbackToDefaultDatabase();
+        if (unsubscribe) unsubscribe();
+        setTimeout(startListener, 100);
+      } else {
+        handleFirestoreError(err, OperationType.LIST, PEDIDOS_COLLECTION);
+      }
     });
-    // Sort orders by creation date (descending) so latest orders appear first
-    list.sort((a, b) => {
-      const timeA = a.dataCriacao ? new Date(a.dataCriacao).getTime() : 0;
-      const timeB = b.dataCriacao ? new Date(b.dataCriacao).getTime() : 0;
-      return timeB - timeA;
-    });
-    onSync(list);
-  }, (err) => {
-    console.error('Error listening to Orders collection:', err);
-    handleFirestoreError(err, OperationType.LIST, PEDIDOS_COLLECTION);
-  });
+  }
+
+  startListener();
+  return () => {
+    if (unsubscribe) unsubscribe();
+  };
 }
 
 /**
