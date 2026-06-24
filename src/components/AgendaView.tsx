@@ -22,6 +22,7 @@ interface AgendaViewProps {
   onUpdatePedidoStatus: (pedidoId: string, newStatus: Pedido['status']) => void;
   onAddPedido: (newPedido: Pedido) => void;
   onDeletePedido?: (pedidoId: string) => void;
+  onUpdatePedido?: (pedidoId: string, updatedFields: Partial<Pedido>) => void;
 }
 
 // Helper to get Friday, Saturday, and Sunday ISO dates of the current/upcoming weekend relative to today
@@ -67,7 +68,8 @@ export default function AgendaView({
   sabores,
   onUpdatePedidoStatus,
   onAddPedido,
-  onDeletePedido
+  onDeletePedido,
+  onUpdatePedido
 }: AgendaViewProps) {
   const { friday: fDate, saturday: saDate, sunday: suDate } = getWeekendDates();
 
@@ -78,6 +80,10 @@ export default function AgendaView({
   // Detalhes modal state
   const [detailedPedidoId, setDetailedPedidoId] = useState<string | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+
+  // Editing state
+  const [editingDateId, setEditingDateId] = useState<string | null>(null);
+  const [tempDate, setTempDate] = useState<string>('');
   
   // Quick manual add form state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -319,18 +325,55 @@ export default function AgendaView({
               <div className="flex justify-between items-start">
                 <div>
                   <h4 className="font-serif text-lg font-bold text-on-surface">{ped.clienteNome}</h4>
-                  <div className="flex items-center gap-1.5 text-xs text-on-surface-variant mt-0.5">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>
-                      {activeSegmentFilter === 'entregas'
-                        ? new Date(ped.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                        : new Date(ped.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short' })}, {' '}
-                      {ped.horario}
-                    </span>
-                    <span className="font-semibold text-[10px] bg-primary-container px-1.5 py-0.5 rounded text-secondary">
-                      {ped.codigo}
-                    </span>
-                  </div>
+                  {editingDateId === ped.id ? (
+                    <div className="flex items-center gap-1.5 mt-1 bg-surface-container p-1 rounded border border-outline-variant/30">
+                      <input
+                        type="date"
+                        value={tempDate}
+                        onChange={(e) => setTempDate(e.target.value)}
+                        className="px-2 py-0.5 text-xs border rounded bg-white text-on-surface focus:ring-1 focus:ring-primary outline-none font-sans"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onUpdatePedido && tempDate) {
+                            onUpdatePedido(ped.id, { data: tempDate });
+                          }
+                          setEditingDateId(null);
+                        }}
+                        className="bg-emerald-600 text-white font-bold px-2 py-1 rounded text-[10px] hover:bg-emerald-700 cursor-pointer"
+                      >
+                        Salvar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingDateId(null)}
+                        className="bg-slate-200 text-slate-700 font-bold px-2 py-1 rounded text-[10px] hover:bg-slate-300 cursor-pointer"
+                      >
+                        X
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-xs text-on-surface-variant mt-0.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span
+                        title="Clique para alterar a data do pedido"
+                        className="cursor-pointer hover:underline flex items-center gap-1 text-primary font-medium"
+                        onClick={() => {
+                          setEditingDateId(ped.id);
+                          setTempDate(ped.data);
+                        }}
+                      >
+                        {activeSegmentFilter === 'entregas'
+                          ? new Date(ped.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                          : new Date(ped.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short' })}, {' '}
+                        {ped.horario} <span className="text-[10px] text-on-surface-variant/70">✏️ Alterar Data</span>
+                      </span>
+                      <span className="font-semibold text-[10px] bg-primary-container px-1.5 py-0.5 rounded text-secondary ml-1">
+                        {ped.codigo}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* status indicator tag */}
@@ -597,10 +640,22 @@ export default function AgendaView({
                   <span className="capitalize text-sm font-medium">{detailedPedido.tipoEntrega === 'entrega' ? '🚚 Entrega' : '🏪 Retirada'}</span>
                 </p>
                 <p>
-                  <strong className="text-secondary text-[10px] uppercase font-semibold block">Data/Hora:</strong>
-                  <span className="text-sm font-medium">
-                    {new Date(detailedPedido.data + 'T12:00:00').toLocaleDateString('pt-BR')} às {detailedPedido.horario}
-                  </span>
+                  <strong className="text-secondary text-[10px] uppercase font-semibold block">Data do Pedido:</strong>
+                  <div className="flex items-center gap-1.5 mt-1 bg-surface-container-low p-1.5 rounded border border-outline-variant/10">
+                    <input
+                      type="date"
+                      value={tempDate || detailedPedido.data}
+                      onChange={(e) => {
+                        const newD = e.target.value;
+                        setTempDate(newD);
+                        if (onUpdatePedido && newD) {
+                          onUpdatePedido(detailedPedido.id, { data: newD });
+                        }
+                      }}
+                      className="px-2 py-1 text-xs border rounded bg-white text-on-surface focus:ring-1 focus:ring-primary outline-none font-medium"
+                    />
+                    <span className="text-xs text-on-surface-variant">às {detailedPedido.horario}</span>
+                  </div>
                 </p>
               </div>
 

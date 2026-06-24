@@ -83,9 +83,9 @@ ${pedido.massa ? `*Massa:* ${pedido.massa === 'preta' ? 'Preta (Chocolate) 🍫'
   };
 
   const handleWhatsAppAction = () => {
-    // Standard URL format
+    // Standard URL format targeting Dona Cleusa's number
     const encodedText = encodeURIComponent(customMessage);
-    const url = `https://api.whatsapp.com/send?text=${encodedText}`;
+    const url = `https://api.whatsapp.com/send?phone=5512988275469&text=${encodedText}`;
     
     // Attempt opening in a secure new tab
     try {
@@ -259,14 +259,24 @@ ${pedido.massa ? `*Massa:* ${pedido.massa === 'preta' ? 'Preta (Chocolate) 🍫'
         </div>
       )}
 
+      {/* WhatsApp Message Confirmation Alert */}
+      <div className="bg-amber-500/15 border-2 border-amber-500 rounded-xl p-4 mb-4 text-xs text-amber-900 leading-normal animate-pulse">
+        <div className="flex items-center gap-2 font-black mb-1 text-amber-950">
+          <span>🚨</span> IMPORTANTE: SEU PEDIDO NÃO ESTÁ CONFIRMADO AINDA!
+        </div>
+        <p className="font-medium">
+          Dona Cleusa precisa receber a mensagem no WhatsApp para iniciar a produção do bolo. Por favor, clique no botão <strong className="underline text-amber-950">"Enviar Pedido para o WhatsApp da Mãe"</strong> abaixo e clique em "Enviar" no aplicativo do WhatsApp.
+        </p>
+      </div>
+
       {/* Buttons */}
       <div className="flex flex-col gap-3 w-full">
         <button
           onClick={handleWhatsAppAction}
-          className="w-full h-14 bg-tertiary text-white font-label-md rounded-full flex items-center justify-center gap-2 shadow-md hover:bg-tertiary/90 active:scale-95 transition-all cursor-pointer border border-tertiary/10"
+          className="w-full h-14 bg-tertiary text-white font-label-md rounded-full flex items-center justify-center gap-2 shadow-md hover:bg-tertiary/90 active:scale-95 transition-all cursor-pointer border border-tertiary/10 font-bold"
         >
           <Send className="w-5 h-5 fill-white text-tertiary" />
-          <span>Enviar Comprovante via WhatsApp</span>
+          <span>Enviar Pedido para o WhatsApp da Mãe</span>
         </button>
 
         <button

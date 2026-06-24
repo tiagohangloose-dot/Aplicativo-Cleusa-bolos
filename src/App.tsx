@@ -316,6 +316,14 @@ export default function App() {
     });
   };
 
+  const handleUpdatePedido = (pedidoId: string, updatedFields: Partial<Pedido>) => {
+    // Optimistic local state update
+    setPedidos(prev => prev.map(p => p.id === pedidoId ? { ...p, ...updatedFields } : p));
+    updateOrderInCloud(pedidoId, updatedFields).catch(err => {
+      console.error('Error updating order fields in cloud:', err);
+    });
+  };
+
   const handleAddManualPedido = (newPedido: Pedido) => {
     const { id, ...newPedidoFields } = newPedido;
     saveOrderToCloud(newPedidoFields).catch(err => {
@@ -652,6 +660,7 @@ export default function App() {
                     onUpdatePedidoStatus={handleUpdatePedidoStatus}
                     onAddPedido={handleAddManualPedido}
                     onDeletePedido={handleDeletePedido}
+                    onUpdatePedido={handleUpdatePedido}
                   />
                 </div>
               )}
