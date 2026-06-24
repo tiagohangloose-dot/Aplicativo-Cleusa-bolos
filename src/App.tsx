@@ -295,8 +295,15 @@ export default function App() {
     try {
       const docId = await saveOrderToCloud(newPedidoData);
       const newPedido: Pedido = { ...newPedidoData, id: docId };
+      setPedidos(prev => {
+        if (prev.some(p => p.id === docId)) return prev;
+        return [newPedido, ...prev];
+      });
       setLastPlacedOrder(newPedido);
-      setMeusPedidosIds(prev => [...prev, docId]);
+      setMeusPedidosIds(prev => {
+        if (prev.includes(docId)) return prev;
+        return [...prev, docId];
+      });
     } catch (err) {
       console.error('Error in handlePlaceOrder cloud save, falling back to local:', err);
       const orderId = 'ord-' + Date.now();
@@ -326,10 +333,13 @@ export default function App() {
 
   const handleAddManualPedido = (newPedido: Pedido) => {
     const { id, ...newPedidoFields } = newPedido;
+    // Optimistic local state update
+    setPedidos(prev => {
+      if (prev.some(p => p.id === id)) return prev;
+      return [newPedido, ...prev];
+    });
     saveOrderToCloud(newPedidoFields).catch(err => {
       console.error('Error saving manual order to cloud:', err);
-      // Fallback
-      setPedidos(prev => [newPedido, ...prev]);
     });
   };
 
