@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDocFromServer } from 'firebase/firestore';
+import { initializeFirestore, collection, doc, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, getDocFromServer } from 'firebase/firestore';
 import { Pedido, BoloSabor, BoloTamanho, AdicionalExtra, BoloSalgadoTamanho, BoloPiscinaSabor } from '../types';
 import {
   INITIAL_FLAVORS,
@@ -10,6 +10,23 @@ import {
   INITIAL_PISCINA_PRECO
 } from '../initialData';
 import firebaseConfigJson from '../../firebase-applet-config.json';
+
+// Helper function to deep clean any object of 'undefined' values before writing to Firestore
+function sanitizeForFirestore(obj: any): any {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeForFirestore);
+  }
+  const cleanObj: any = {};
+  for (const key of Object.keys(obj)) {
+    if (obj[key] !== undefined) {
+      cleanObj[key] = sanitizeForFirestore(obj[key]);
+    }
+  }
+  return cleanObj;
+}
 
 // 1. Load Firebase configuration securely from environment variables, fallback to applet configuration
 const firebaseConfig = {
@@ -25,8 +42,10 @@ const databaseId = (import.meta as any).env?.VITE_FIREBASE_DATABASE_ID || fireba
 
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore with the database ID
-export const db = getFirestore(app, databaseId);
+// Initialize Firestore with settings to ignore undefined properties and target the specific database
+export const db = initializeFirestore(app, {
+  ignoreUndefinedProperties: true
+}, databaseId);
 
 // Error Handling Infrastructure
 export enum OperationType {
@@ -160,7 +179,7 @@ export function listenToSettings(onSync: (settings: AppSettings) => void) {
 export async function saveSettingsToCloud(updatedSettings: Partial<AppSettings>) {
   const docRef = doc(db, SETTINGS_COLLECTION, SETTINGS_DOC_ID);
   try {
-    await setDoc(docRef, updatedSettings, { merge: true });
+    await setDoc(docRef, sanitizeForFirestore(updatedSettings), { merge: true });
   } catch (err) {
     console.error('Error updating app settings:', err);
     handleFirestoreError(err, OperationType.WRITE, `${SETTINGS_COLLECTION}/${SETTINGS_DOC_ID}`);
@@ -200,10 +219,10 @@ export function listenToOrders(onSync: (orders: Pedido[]) => void) {
 export async function saveOrderToCloud(pedido: Omit<Pedido, 'id'>) {
   const colRef = collection(db, PEDIDOS_COLLECTION);
   try {
-    const docRef = await addDoc(colRef, {
+    const docRef = await addDoc(colRef, sanitizeForFirestore({
       ...pedido,
       dataCriacao: new Date().toISOString()
-    });
+    }));
     return docRef.id;
   } catch (err) {
     console.error('Error saving order to Cloud Firestore:', err);
@@ -218,7 +237,7 @@ export async function saveOrderToCloud(pedido: Omit<Pedido, 'id'>) {
 export async function updateOrderInCloud(pedidoId: string, updatedFields: Partial<Pedido>) {
   const docRef = doc(db, PEDIDOS_COLLECTION, pedidoId);
   try {
-    await updateDoc(docRef, updatedFields);
+    await updateDoc(docRef, sanitizeForFirestore(updatedFields));
   } catch (err) {
     console.error('Error updating order:', err);
     handleFirestoreError(err, OperationType.UPDATE, `${PEDIDOS_COLLECTION}/${pedidoId}`);
