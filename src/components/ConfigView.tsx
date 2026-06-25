@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BoloSabor, BoloTamanho, AdicionalExtra, BoloSalgadoTamanho, BoloPiscinaSabor } from '../types';
-import { Cake, Plus, X, Search, SlidersHorizontal, Image, DollarSign, Save, LogOut, Trash2 } from 'lucide-react';
+import { Cake, Plus, X, Search, SlidersHorizontal, Image, DollarSign, Save, LogOut, Trash2, ArrowUp, ArrowDown, Edit, Check } from 'lucide-react';
 
 const DEFAULT_DOCE = 'https://lh3.googleusercontent.com/aida-public/AB6AXuDgm8Ww9FF4UuIIV4mS5CCF1rzWZ-TpARtIhG-Q5ZoiqvPuZ3W2BatsiIeYhoq1LrFPjUqDo5eSLxClwZ2RpmjXLkcHNPkEdYwBIMfod0OKPIhC_7bOnVqRCMp3yF-sLGdAYwqpHfQUChex6La0BHwWe642yGrol6f7Ivq95C9UrNm-D7sDjSXgkJDLrXmf8o4zAMVxdchfs2Y1FK7Xk6hr4y2ODbctk93w0SNa35rHexu3VB-km660W5gljd1HxBd37tUZRYUW7rye';
 const DEFAULT_SALGADO = 'https://images.unsplash.com/photo-1619860860774-1e2e17343432?w=800&auto=format&fit=crop&q=80';
@@ -38,6 +38,7 @@ interface ConfigViewProps {
   onUpdateImagemBoloDoce?: (val: string) => void;
   onUpdateImagemBoloSalgado?: (val: string) => void;
   onUpdateImagemBoloPiscina?: (val: string) => void;
+  onReorderSabores?: (newSabores: BoloSabor[]) => void;
 }
 
 export default function ConfigView({
@@ -71,7 +72,8 @@ export default function ConfigView({
   imagemBoloPiscina,
   onUpdateImagemBoloDoce,
   onUpdateImagemBoloSalgado,
-  onUpdateImagemBoloPiscina
+  onUpdateImagemBoloPiscina,
+  onReorderSabores
 }: ConfigViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<'recheios' | 'salgados' | 'piscina' | 'taxas' | 'capas'>('recheios');
   const [searchTerm, setSearchTerm] = useState('');
@@ -129,6 +131,30 @@ export default function ConfigView({
 
   // Local feedback timer
   const [saveAllFeedback, setSaveAllFeedback] = useState(false);
+
+  // State for inline flavor editing
+  const [editingSaborId, setEditingSaborId] = useState<string | null>(null);
+  const [editNome, setEditNome] = useState('');
+  const [editDescricao, setEditDescricao] = useState('');
+
+  const handleMoveSabor = (saborId: string, direction: 'up' | 'down') => {
+    if (!onReorderSabores) return;
+    const index = sabores.findIndex(s => s.id === saborId);
+    if (index === -1) return;
+    
+    const newSabores = [...sabores];
+    if (direction === 'up' && index > 0) {
+      const temp = newSabores[index];
+      newSabores[index] = newSabores[index - 1];
+      newSabores[index - 1] = temp;
+      onReorderSabores(newSabores);
+    } else if (direction === 'down' && index < newSabores.length - 1) {
+      const temp = newSabores[index];
+      newSabores[index] = newSabores[index + 1];
+      newSabores[index + 1] = temp;
+      onReorderSabores(newSabores);
+    }
+  };
 
   const handleAddNewBolo = (e: React.FormEvent) => {
     e.preventDefault();
@@ -386,6 +412,8 @@ export default function ConfigView({
               {filteredSabores.map((sab) => {
                 const isEnabled = sab.status === 'disponivel';
                 const isEspecialList = !!sab.isEspecial;
+                const isEditing = editingSaborId === sab.id;
+                const indexInOriginal = sabores.findIndex(s => s.id === sab.id);
                 
                 return (
                   <article
@@ -394,74 +422,167 @@ export default function ConfigView({
                       isEnabled ? 'bg-surface-container-lowest border-outline-variant/10 shadow-sm' : 'bg-surface-container-low opacity-75 grayscale-[0.2]'
                     }`}
                   >
-                    <div className="flex justify-between items-start gap-2 mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-serif font-black text-xs shrink-0">
-                          {sab.nome.charAt(0).toUpperCase()}
+                    {isEditing ? (
+                      <div className="space-y-3">
+                        <h4 className="font-serif text-xs font-bold text-secondary uppercase tracking-wider">Editar Recheio</h4>
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-[10px] text-on-surface-variant font-bold mb-1 block">Nome do Recheio</label>
+                            <input
+                              type="text"
+                              className="w-full bg-surface-container-low rounded-lg p-2.5 text-xs border border-outline-variant/20 outline-none font-bold text-on-surface"
+                              value={editNome}
+                              onChange={(e) => setEditNome(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-on-surface-variant font-bold mb-1 block">Descrição do Recheio</label>
+                            <textarea
+                              rows={2}
+                              className="w-full bg-surface-container-low rounded-lg p-2.5 text-xs border border-outline-variant/20 outline-none text-on-surface resize-none"
+                              value={editDescricao}
+                              onChange={(e) => setEditDescricao(e.target.value)}
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-serif text-sm font-bold text-on-surface flex items-center gap-1.5">
-                            <span>{sab.nome}</span>
-                            {isEspecialList && (
-                              <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full font-bold">★ Sabor Especial</span>
+                        <div className="flex gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!editNome.trim()) {
+                                alert('O nome do recheio não pode ser vazio.');
+                                return;
+                              }
+                              onUpdateSabor(sab.id, { nome: editNome.trim(), descricao: editDescricao.trim() || undefined });
+                              setEditingSaborId(null);
+                            }}
+                            className="bg-primary text-white text-[11px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-opacity-95 cursor-pointer"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Confirmar</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingSaborId(null)}
+                            className="bg-outline-variant/20 text-on-surface-variant text-[11px] font-semibold px-3 py-1.5 rounded-lg hover:bg-outline-variant/35 cursor-pointer"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex justify-between items-start gap-2 mb-3">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-serif font-black text-xs shrink-0 font-sans">
+                              {sab.nome.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-serif text-sm font-bold text-on-surface flex flex-wrap items-center gap-1.5">
+                                <span className="truncate">{sab.nome}</span>
+                                {isEspecialList && (
+                                  <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full font-bold">★ Sabor Especial</span>
+                                )}
+                              </h4>
+                              <span className="text-[10px] text-on-surface-variant font-medium block truncate max-w-full">
+                                {sab.descricao || 'Sem descrição cadastrada.'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                            {/* Reordering buttons */}
+                            {onReorderSabores && (
+                              <div className="flex items-center bg-surface-container-low p-0.5 rounded-lg border border-outline-variant/10">
+                                <button
+                                  type="button"
+                                  disabled={indexInOriginal === 0}
+                                  onClick={() => handleMoveSabor(sab.id, 'up')}
+                                  className="p-1 rounded text-on-surface-variant disabled:opacity-35 hover:bg-white cursor-pointer"
+                                  title="Mover para cima"
+                                >
+                                  <ArrowUp className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={indexInOriginal === sabores.length - 1}
+                                  onClick={() => handleMoveSabor(sab.id, 'down')}
+                                  className="p-1 rounded text-on-surface-variant disabled:opacity-35 hover:bg-white cursor-pointer"
+                                  title="Mover para baixo"
+                                >
+                                  <ArrowDown className="w-3 h-3" />
+                                </button>
+                              </div>
                             )}
-                          </h4>
-                          <span className="text-[10px] text-on-surface-variant font-medium block">
-                            {sab.descricao || 'Sem descrição cadastrada.'}
-                          </span>
+
+                            {/* Edit Button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingSaborId(sab.id);
+                                setEditNome(sab.nome);
+                                setEditDescricao(sab.descricao || '');
+                              }}
+                              className="text-primary hover:text-secondary p-1.5 rounded-lg hover:bg-primary/5 transition-colors cursor-pointer"
+                              title="Editar Nome e Descrição"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+
+                            {/* Status Switch */}
+                            <label className="relative inline-flex items-center cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={isEnabled}
+                                onChange={(e) => onUpdateSabor(sab.id, { status: e.target.checked ? 'disponivel' : 'indisponivel' })}
+                              />
+                              <div className="w-9 h-5 bg-outline-variant/40 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                            </label>
+
+                            {/* Delete Button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm(`Deseja realmente remover o recheio "${sab.nome}"?`)) {
+                                  onDeleteSabor(sab.id);
+                                }
+                              }}
+                              className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-2">
-                        <label className="relative inline-flex items-center cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={isEnabled}
-                            onChange={(e) => onUpdateSabor(sab.id, { status: e.target.checked ? 'disponivel' : 'indisponivel' })}
-                          />
-                          <div className="w-9 h-5 bg-outline-variant/40 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (confirm(`Deseja realmente remover o recheio "${sab.nome}"?`)) {
-                              onDeleteSabor(sab.id);
-                            }
-                          }}
-                          className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-outline-variant/10">
-                      <div>
-                        <span className="text-[9px] text-on-surface-variant font-bold mb-1 block">Tipo de Recheio</span>
-                        <select
-                          className="w-full bg-surface-container-low/60 rounded-lg p-2 text-xs border border-outline-variant/10 outline-none font-semibold"
-                          value={sab.isEspecial ? 'especial' : 'normal'}
-                          onChange={(e) => onUpdateSabor(sab.id, { isEspecial: e.target.value === 'especial' })}
-                        >
-                          <option value="normal">🍰 Normal (Sem custo)</option>
-                          <option value="especial">⭐️ Especial (Com acréscimo)</option>
-                        </select>
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-on-surface-variant font-bold mb-1 block">
-                          {sab.isEspecial ? 'Valor de Acréscimo (R$)' : 'Sem custo adicional'}
-                        </span>
-                        <input
-                          className="w-full bg-surface-container-low/60 rounded-lg p-2 text-xs border border-outline-variant/10 outline-none font-bold text-secondary disabled:opacity-50"
-                          type="number"
-                          step="1"
-                          disabled={!sab.isEspecial}
-                          value={sab.isEspecial ? (sab.adicionalPreco ?? 20) : 0}
-                          onChange={(e) => onUpdateSabor(sab.id, { adicionalPreco: parseFloat(e.target.value) || 0 })}
-                        />
-                      </div>
-                    </div>
+                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-outline-variant/10">
+                          <div>
+                            <span className="text-[9px] text-on-surface-variant font-bold mb-1 block">Tipo de Recheio</span>
+                            <select
+                              className="w-full bg-surface-container-low/60 rounded-lg p-2 text-xs border border-outline-variant/10 outline-none font-semibold"
+                              value={sab.isEspecial ? 'especial' : 'normal'}
+                              onChange={(e) => onUpdateSabor(sab.id, { isEspecial: e.target.value === 'especial' })}
+                            >
+                              <option value="normal">🍰 Normal (Sem custo)</option>
+                              <option value="especial">⭐️ Especial (Com acréscimo)</option>
+                            </select>
+                          </div>
+                          <div>
+                            <span className="text-[9px] text-on-surface-variant font-bold mb-1 block">
+                              {sab.isEspecial ? 'Valor de Acréscimo (R$)' : 'Sem custo adicional'}
+                            </span>
+                            <input
+                              className="w-full bg-surface-container-low/60 rounded-lg p-2 text-xs border border-outline-variant/10 outline-none font-bold text-secondary disabled:opacity-50"
+                              type="number"
+                              step="1"
+                              disabled={!sab.isEspecial}
+                              value={sab.isEspecial ? (sab.adicionalPreco ?? 20) : 0}
+                              onChange={(e) => onUpdateSabor(sab.id, { adicionalPreco: parseFloat(e.target.value) || 0 })}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </article>
                 );
               })}

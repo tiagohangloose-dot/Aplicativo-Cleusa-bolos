@@ -397,6 +397,13 @@ export default function App() {
     });
   };
 
+  const handleReorderSabores = (newSabores: BoloSabor[]) => {
+    setSabores(newSabores);
+    saveSettingsToCloud({ sabores: newSabores }).catch(err => {
+      console.error('Error reordering sabores in cloud:', err);
+    });
+  };
+
   const handleAddExtra = (newExtra: AdicionalExtra) => {
     const updated = [...extras, newExtra];
     setExtras(updated);
@@ -915,6 +922,7 @@ export default function App() {
                     onUpdateImagemBoloDoce={handleUpdateImagemBoloDoce}
                     onUpdateImagemBoloSalgado={handleUpdateImagemBoloSalgado}
                     onUpdateImagemBoloPiscina={handleUpdateImagemBoloPiscina}
+                    onReorderSabores={handleReorderSabores}
                   />
                 </div>
               )}

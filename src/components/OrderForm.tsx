@@ -35,7 +35,15 @@ export default function OrderForm({
   imagemBoloSalgado,
   imagemBoloPiscina
 }: OrderFormProps) {
-  const disponivelSabores = sabores.filter(s => s.status === 'disponivel');
+  const disponivelSabores = [...sabores]
+    .filter(s => s.status === 'disponivel')
+    .sort((a, b) => {
+      const aEsp = !!a.isEspecial;
+      const bEsp = !!b.isEspecial;
+      if (aEsp && !bEsp) return 1;
+      if (!aEsp && bEsp) return -1;
+      return 0;
+    });
   const disponivelPiscinas = saboresPiscina.filter(s => s.status === 'disponivel');
   
   // Order Type state
