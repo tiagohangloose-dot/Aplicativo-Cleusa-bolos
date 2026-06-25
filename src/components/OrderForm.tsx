@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { BoloSabor, BoloTamanho, AdicionalExtra, Pedido, BoloSalgadoTamanho, BoloPiscinaSabor } from '../types';
-import { User, Phone, MapPin, Calendar, Clock, Cake, Check, Info } from 'lucide-react';
+import { User, Phone, MapPin, Calendar, Clock, Cake, Check, Info, Copy } from 'lucide-react';
+import { generatePixCopyPaste } from '../lib/pix';
+
 
 interface OrderFormProps {
   sabores: BoloSabor[];
@@ -75,6 +77,16 @@ export default function OrderForm({
   const [estado, setEstado] = useState('');
   const [cepLoading, setCepLoading] = useState(false);
   const [cepError, setCepError] = useState('');
+  const [showPixConfirmModal, setShowPixConfirmModal] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+
+  const showToast = (message: string) => {
+    setCopyFeedback(message);
+    setTimeout(() => {
+      setCopyFeedback(null);
+    }, 3000);
+  };
+
 
   // Available business hours from 08:00 to 18:00
   const BUSINESS_HOURS = [
@@ -221,6 +233,45 @@ export default function OrderForm({
     total += taxaEntrega;
   }
 
+  const handleConfirmOrder = () => {
+    setShowPixConfirmModal(false);
+    onPlaceOrder({
+      clienteNome,
+      whatsapp,
+      tipoEntrega,
+      data,
+      horario,
+      saborId: tipoBolo === 'doce' ? saborId : tipoBolo === 'salgado' ? tamanhoSalgadoId : saborPiscinaId,
+      saborNome: finalSaborNome,
+      tamanhoId: tipoBolo === 'doce' ? tamanhoId : tipoBolo === 'salgado' ? tamanhoSalgadoId : 'piscina-unico',
+      tamanhoLabel: summaryLabel,
+      adicionais: [...adicionaisSelecionados, ...(detalhesVal ? [detalhesVal] : [])],
+      adicionaisPreco: extrasPreco,
+      total,
+      formaPagamento,
+      status: 'pendente',
+      detalhes: detalhesVal,
+      massa: tipoBolo === 'doce' ? massa : undefined,
+      quantidadeRecheios: tipoBolo === 'doce' ? quantidadeRecheios : undefined,
+      recheio1Id: tipoBolo === 'doce' ? saborId : undefined,
+      recheio1Nome: tipoBolo === 'doce' ? recheio1?.nome : undefined,
+      recheio2Id: (tipoBolo === 'doce' && recheio2) ? recheio2Id : undefined,
+      recheio2Nome: (tipoBolo === 'doce' && recheio2) ? recheio2.nome : undefined,
+      tipoBolo,
+      ...(tipoEntrega === 'entrega' ? {
+        cep,
+        rua,
+        numero,
+        complemento,
+        bairro,
+        cidade,
+        estado
+      } : {
+        nomeRetirada: nomeRetirada.trim() || clienteNome
+      })
+    });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!clienteNome) {
@@ -258,41 +309,7 @@ export default function OrderForm({
       return;
     }
 
-    onPlaceOrder({
-      clienteNome,
-      whatsapp,
-      tipoEntrega,
-      data,
-      horario,
-      saborId: tipoBolo === 'doce' ? saborId : tipoBolo === 'salgado' ? tamanhoSalgadoId : saborPiscinaId,
-      saborNome: finalSaborNome,
-      tamanhoId: tipoBolo === 'doce' ? tamanhoId : tipoBolo === 'salgado' ? tamanhoSalgadoId : 'piscina-unico',
-      tamanhoLabel: summaryLabel,
-      adicionais: [...adicionaisSelecionados, ...(detalhesVal ? [detalhesVal] : [])],
-      adicionaisPreco: extrasPreco,
-      total,
-      formaPagamento,
-      status: 'pendente',
-      detalhes: detalhesVal,
-      massa: tipoBolo === 'doce' ? massa : undefined,
-      quantidadeRecheios: tipoBolo === 'doce' ? quantidadeRecheios : undefined,
-      recheio1Id: tipoBolo === 'doce' ? saborId : undefined,
-      recheio1Nome: tipoBolo === 'doce' ? recheio1?.nome : undefined,
-      recheio2Id: (tipoBolo === 'doce' && recheio2) ? recheio2Id : undefined,
-      recheio2Nome: (tipoBolo === 'doce' && recheio2) ? recheio2.nome : undefined,
-      tipoBolo,
-      ...(tipoEntrega === 'entrega' ? {
-        cep,
-        rua,
-        numero,
-        complemento,
-        bairro,
-        cidade,
-        estado
-      } : {
-        nomeRetirada: nomeRetirada.trim() || clienteNome
-      })
-    });
+    setShowPixConfirmModal(true);
   };
 
   return (
@@ -952,6 +969,16 @@ export default function OrderForm({
             <span className="text-[9px] mt-0.5 opacity-80">No ato da entrega</span>
           </button>
         </div>
+
+        {/* 30% Pix Advance Warning Banner */}
+        <div className="mt-4 bg-primary-container/10 border border-primary/20 p-4 rounded-lg text-xs leading-relaxed text-on-surface-variant space-y-1 font-sans">
+          <p className="font-bold text-secondary flex items-center gap-1.5">
+            <span>⚠️</span> Sinal de Reserva de 30% Obrigatório:
+          </p>
+          <p className="text-[11px]">
+            Todas as encomendas requerem um <strong>pagamento adiantado de 30% do valor total via Pix</strong> para confirmar a data na agenda. Os 70% restantes serão pagos na retirada/entrega através do método selecionado acima ({formaPagamento === 'pix' ? 'Pix' : formaPagamento === 'cartao' ? 'Cartão' : 'Dinheiro'}).
+          </p>
+        </div>
       </div>
 
       {/* FLOATING SUBMISSION FOOTER WITH TOTAL COUNTER */}
@@ -970,6 +997,87 @@ export default function OrderForm({
           Confirmar Encomenda
         </button>
       </div>
+
+      {showPixConfirmModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-surface p-6 rounded-2xl max-w-md w-full shadow-2xl border border-outline-variant/20 relative animate-in zoom-in-95 duration-200 text-on-surface">
+            <div className="flex items-center gap-3 mb-4 text-secondary">
+              <span className="text-2xl">🍰</span>
+              <h3 className="font-serif text-lg font-bold">Confirmação de Reserva</h3>
+            </div>
+
+            <div className="space-y-4 font-sans text-xs text-on-surface-variant leading-relaxed">
+              <p>
+                Para reservar a data e garantir a preparação do seu bolo com a Dona Cleusa, é necessário um <strong>pagamento adiantado de 30% (sinal)</strong> via Pix.
+              </p>
+              
+              <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant/20 space-y-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-on-surface-variant">Valor Total:</span>
+                  <span className="font-bold text-on-surface">R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between items-center text-base border-t border-b border-outline-variant/15 py-2 font-bold">
+                  <span className="text-secondary">Sinal (30% para reservar):</span>
+                  <span className="text-tertiary text-lg font-black">R$ {(total * 0.3).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs text-on-surface-variant">
+                  <span>Restante (70% na entrega/retirada):</span>
+                  <span>R$ {(total * 0.7).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-primary-container/10 border border-primary/20 rounded-xl space-y-1">
+                <p className="font-bold text-secondary">Chave Pix Celular:</p>
+                <p className="font-mono font-bold text-sm text-on-surface">(12) 98827-5469</p>
+              </div>
+
+              <div className="space-y-1">
+                <span className="font-bold block text-on-surface">Código Pix Copia e Cola (30%):</span>
+                <div className="font-mono text-[10px] text-on-surface break-all bg-white/60 p-2 rounded-md border border-outline-variant/20 max-h-[80px] overflow-y-auto select-all leading-normal">
+                  {generatePixCopyPaste(total * 0.3)}
+                </div>
+              </div>
+
+              <p className="text-[11px] text-amber-800 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                💡 <strong>Dica:</strong> Ao clicar no botão abaixo, o Pix Copia e Cola do sinal (30%) será <strong>copiado automaticamente</strong> para você pagar no app do seu banco! Depois, você será direcionado para enviar a mensagem de reserva pelo WhatsApp de Dona Cleusa.
+              </p>
+            </div>
+
+            <div className="mt-6 flex flex-col sm:flex-row gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(generatePixCopyPaste(total * 0.3));
+                  showToast("Código Pix do Sinal copiado!");
+                  setTimeout(() => {
+                    handleConfirmOrder();
+                  }, 600);
+                }}
+                className="flex-1 py-3 bg-primary text-white text-xs font-bold rounded-lg hover:bg-opacity-95 transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-[0.98]"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>Copiar Pix & Encomendar</span>
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setShowPixConfirmModal(false)}
+                className="py-3 px-5 bg-surface-container-high text-on-surface text-xs font-semibold rounded-lg hover:bg-surface-container-highest transition-all cursor-pointer"
+              >
+                Voltar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Toast Notification inside Form */}
+      {copyFeedback && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-secondary text-white text-xs font-bold px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 border border-outline/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <span>✨</span>
+          <span>{copyFeedback}</span>
+        </div>
+      )}
     </form>
   );
 }

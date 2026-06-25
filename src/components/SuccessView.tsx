@@ -3,6 +3,7 @@ import { Pedido } from '../types';
 import Confetti from './Confetti';
 import { CheckCircle, ArrowLeft, Send, Home, Info, ExternalLink } from 'lucide-react';
 import CleusaLogo from './CleusaLogo';
+import { generatePixCopyPaste } from '../lib/pix';
 
 interface SuccessViewProps {
   pedido: Pedido;
@@ -20,6 +21,10 @@ export default function SuccessView({ pedido, onReset }: SuccessViewProps) {
     }, 3000);
   };
 
+  const total = pedido.total;
+  const sinal = total * 0.3;
+  const restante = total * 0.7;
+
   // Generate a beautiful formatted whatsapp message text for Cleusa
   const customMessage = `Olá Dona Cleusa! Acabei de enviar um pedido pelo aplicativo:
 *Código:* ${pedido.codigo}
@@ -28,59 +33,14 @@ ${pedido.massa ? `*Massa:* ${pedido.massa === 'preta' ? 'Preta (Chocolate) 🍫'
 *Recheio/Bolo:* ${pedido.saborNome}
 *Tamanho:* ${pedido.tamanhoLabel}
 *Entrega:* ${pedido.tipoEntrega === 'entrega' ? '🚚 Entrega' : '🏪 Retirada'}
-*Pagamento:* ${pedido.formaPagamento === 'pix' ? '📱 Pix (Chave: +5512988275469)' : pedido.formaPagamento === 'cartao' ? '💳 Cartão na maquininha' : '💵 Dinheiro'}
 *Data/Hora:* ${new Date(pedido.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} às ${pedido.horario}
-*Total:* R$ ${pedido.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-*Detalhes:* ${pedido.detalhes || 'Nenhum'}`;
+*Total:* R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+*Sinal de 30% (Pago via Pix):* R$ ${sinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} 💸
+*Restante (70%):* R$ ${restante.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (na ${pedido.formaPagamento === 'pix' ? 'entrega via Pix' : pedido.formaPagamento === 'cartao' ? 'entrega via Cartão' : 'entrega em Dinheiro'})
+*Detalhes:* ${pedido.detalhes || 'Nenhum'}
 
-  // Generate Pix Static Payload function
-  const generatePixCopyPaste = (amount: number) => {
-    const key = "+5512988275469"; // Celular formatado no padrão internacional com +55 exigido pelo Banco Central
-    const merchantName = "CLEUSA DALMAS COSTA";
-    const merchantCity = "SAO JOSE DOS CAMPOS";
-    
-    const formatPart = (id: number, value: string) => {
-      const idStr = id.toString().padStart(2, '0');
-      const lenStr = value.length.toString().padStart(2, '0');
-      return `${idStr}${lenStr}${value}`;
-    };
+_(Vou enviar o comprovante do sinal de 30% em seguida!)_`;
 
-    // ID 26: Merchant Account Info
-    const gui = formatPart(0, 'br.gov.bcb.pix');
-    const chave = formatPart(1, key);
-    const merchantAccountInfo = formatPart(26, `${gui}${chave}`);
-
-    // ID 52: Merchant Category Code
-    const categoryCode = formatPart(52, '0000');
-    // ID 53: Transaction Currency (986 is BRL)
-    const currency = formatPart(53, '986');
-    // ID 54: Transaction Amount
-    const amountStr = amount.toFixed(2);
-    const transactionAmount = formatPart(54, amountStr);
-    // ID 58: Country Code (BR)
-    const countryCode = formatPart(58, 'BR');
-    // ID 59: Merchant Name
-    const merchantNamePart = formatPart(59, merchantName);
-    // ID 60: Merchant City
-    const merchantCityPart = formatPart(60, merchantCity);
-    // ID 62: Additional Data Field Template
-    const txidPart = formatPart(5, '***');
-    const additionalData = formatPart(62, txidPart);
-
-    const payloadWithoutCRC = `000201${merchantAccountInfo}${categoryCode}${currency}${transactionAmount}${countryCode}${merchantNamePart}${merchantCityPart}${additionalData}6304`;
-
-    // Calculate CRC16 CCITT
-    let crc = 0xFFFF;
-    for (let i = 0; i < payloadWithoutCRC.length; i++) {
-      let byte = payloadWithoutCRC.charCodeAt(i);
-      let temp = ((crc >> 8) ^ byte) & 0xFF;
-      temp ^= temp >> 4;
-      crc = ((crc << 8) ^ (temp << 12) ^ (temp << 5) ^ temp) & 0xFFFF;
-    }
-    const crcHex = crc.toString(16).toUpperCase().padStart(4, '0');
-
-    return `${payloadWithoutCRC}${crcHex}`;
-  };
 
   const handleWhatsAppAction = () => {
     // Standard URL format targeting Dona Cleusa's number
@@ -189,75 +149,85 @@ ${pedido.massa ? `*Massa:* ${pedido.massa === 'preta' ? 'Preta (Chocolate) 🍫'
         </div>
       </div>
 
-      {pedido.formaPagamento === 'pix' && (
-        <div className="bg-primary-container/20 border border-primary/20 rounded-xl p-5 mb-8 space-y-4 animate-in fade-in duration-300 shadow-[0px_4px_20px_rgba(75,54,33,0.03)] text-on-surface">
-          <div className="flex items-center justify-between border-b border-primary/10 pb-2">
-            <span className="text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
-              <span>⚡</span> Pagar via Pix (Dona Cleusa)
-            </span>
-            <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded tracking-wide uppercase">
-              Pendente de Envio
-            </span>
-          </div>
-          
-          <p className="text-[11px] text-on-surface-variant leading-normal">
-            Dona Cleusa aceita pagamentos instantâneos via Pix no celular. Pague agora para agilizar a preparação e assar seu bolo no horário correto!
-          </p>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-1">
-            <div className="bg-surface-container-low p-3 rounded-lg border border-outline-variant/20 flex flex-col justify-between">
-              <span className="text-[10px] text-outline/80 font-bold uppercase tracking-wider">Chave Celular Pix</span>
-              <span className="text-sm font-bold text-on-surface font-mono mt-1">(12) 98827-5469</span>
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText("12988275469");
-                  showToast("Chave Pix de Celular copiada com sucesso!");
-                }}
-                className="mt-2 text-[10px] text-primary font-bold hover:underline cursor-pointer flex items-center gap-1 self-start"
-              >
-                <span>Copiar Chave Celular</span>
-              </button>
-            </div>
-
-            <div className="bg-surface-container-low p-3 rounded-lg border border-outline-variant/20 flex flex-col justify-between">
-              <span className="text-[10px] text-outline/80 font-bold uppercase tracking-wider">Valor total a Pagar</span>
-              <span className="text-sm font-black text-tertiary mt-1">
-                R$ {pedido.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </span>
-              <span className="text-[9px] text-outline mt-1.5 leading-none">Confirme o valor no seu banco</span>
-            </div>
+      {/* 30% Advance PIX Payment Card (Required for everyone to secure reservation) */}
+      <div className="bg-primary-container/20 border-2 border-primary rounded-xl p-5 mb-8 space-y-4 animate-in fade-in duration-300 shadow-[0px_4px_20px_rgba(75,54,33,0.05)] text-on-surface">
+        <div className="flex items-center justify-between border-b border-primary/10 pb-2">
+          <span className="text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-1.5">
+            <span>⚡</span> Sinal de Reserva Requerido (30%)
+          </span>
+          <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded tracking-wide uppercase">
+            Aguardando Sinal
+          </span>
+        </div>
+        
+        <p className="text-xs text-on-surface-variant leading-relaxed">
+          Para confirmar a sua reserva na agenda da Dona Cleusa e iniciarmos a produção do seu bolo, <strong>é necessário realizar o pagamento do sinal de 30% do valor total via Pix agora</strong>. O valor restante poderá ser pago na entrega ou retirada.
+        </p>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pb-1">
+          <div className="bg-surface-container-low p-3 rounded-lg border border-outline-variant/20 flex flex-col justify-between">
+            <span className="text-[10px] text-outline/80 font-bold uppercase tracking-wider">Chave Pix Celular</span>
+            <span className="text-[11px] font-bold text-on-surface font-mono mt-1">(12) 98827-5469</span>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText("12988275469");
+                showToast("Chave Pix de Celular copiada!");
+              }}
+              className="mt-2 text-[10px] text-primary font-bold hover:underline cursor-pointer flex items-center gap-1 self-start text-left"
+            >
+              <span>Copiar Celular</span>
+            </button>
           </div>
 
-          <div className="bg-surface-container-low p-3.5 rounded-lg border border-outline-variant/20 relative">
-            <span className="text-[10px] text-outline/80 font-bold uppercase tracking-wider block mb-1.5">
-              Código Pix Copia e Cola oficial:
+          <div className="bg-surface-container-low p-3 rounded-lg border border-outline-variant/20 flex flex-col justify-between">
+            <span className="text-[10px] text-outline/80 font-bold uppercase tracking-wider">Sinal de 30% (Pagar Agora)</span>
+            <span className="text-sm font-black text-tertiary mt-1">
+              R$ {sinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
-            <div className="font-mono text-[10px] text-on-surface break-all bg-white/55 p-2 rounded-md border border-outline-variant/10 max-h-[85px] overflow-y-auto select-all leading-normal">
-              {generatePixCopyPaste(pedido.total)}
-            </div>
-            <div className="flex justify-end mt-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(generatePixCopyPaste(pedido.total));
-                  showToast("Código Pix Copia e Cola copiado! Cole no app do seu banco.");
-                }}
-                className="px-4 py-2 bg-secondary text-white rounded-lg text-xs font-bold shadow-sm hover:opacity-95 cursor-pointer flex items-center gap-1.5 active:scale-[0.98] transition-all"
-              >
-                <span>Copiar Código Copia e Cola</span>
-              </button>
-            </div>
+            <span className="text-[9px] text-outline mt-1.5 leading-none">30% de R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
           </div>
 
-          <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs text-amber-900 leading-normal space-y-1">
-            <p className="font-bold font-sans">⚠️ Envio do Comprovante Requerido:</p>
-            <p className="text-[11px] text-amber-800">
-              Para validar o seu agendamento, você deve realizar o pagamento e clicar no botão abaixo <strong>"Enviar Comprovante via WhatsApp"</strong> para encaminhar o comprovante e os detalhes à Dona Cleusa. Sem isso seu pedido pode sofrer atrasos.
-            </p>
+          <div className="bg-surface-container-low p-3 rounded-lg border border-outline-variant/20 flex flex-col justify-between">
+            <span className="text-[10px] text-outline/80 font-bold uppercase tracking-wider">Restante (Pagar depois)</span>
+            <span className="text-sm font-bold text-on-surface mt-1">
+              R$ {restante.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+            <span className="text-[9px] text-outline mt-1.5 leading-none">
+              Via {pedido.formaPagamento === 'pix' ? 'Pix' : pedido.formaPagamento === 'cartao' ? 'Cartão' : 'Dinheiro'}
+            </span>
           </div>
         </div>
-      )}
+
+        <div className="bg-surface-container-low p-3.5 rounded-lg border border-outline-variant/20 relative">
+          <span className="text-[10px] text-outline/80 font-bold uppercase tracking-wider block mb-1.5">
+            Código Pix Copia e Cola do Sinal (30%):
+          </span>
+          <div className="font-mono text-[10px] text-on-surface break-all bg-white/55 p-2 rounded-md border border-outline-variant/10 max-h-[85px] overflow-y-auto select-all leading-normal">
+            {generatePixCopyPaste(sinal)}
+          </div>
+          <div className="flex justify-end mt-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(generatePixCopyPaste(sinal));
+                showToast("Código Pix do Sinal (30%) copiado!");
+              }}
+              className="px-4 py-2 bg-secondary text-white rounded-lg text-xs font-bold shadow-sm hover:opacity-95 cursor-pointer flex items-center gap-1.5 active:scale-[0.98] transition-all"
+            >
+              <span>Copiar Pix do Sinal (30%)</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs text-amber-900 leading-normal space-y-1">
+          <p className="font-bold font-sans">📋 Como confirmar seu pedido em 2 passos rápidos:</p>
+          <ol className="list-decimal pl-4 space-y-1 text-[11px] text-amber-800 font-sans">
+            <li>Copie e pague o <strong>Pix do Sinal (30%)</strong> acima no app do seu banco.</li>
+            <li>Clique no botão verde abaixo <strong>"Enviar para o WhatsApp Cleusa Bolos"</strong> para enviar os dados da reserva. Em seguida, envie o comprovante Pix do adiantamento na conversa!</li>
+          </ol>
+        </div>
+      </div>
 
       {/* WhatsApp Message Confirmation Alert */}
       <div className="bg-amber-500/15 border-2 border-amber-500 rounded-xl p-4 mb-4 text-xs text-amber-900 leading-normal animate-pulse">
