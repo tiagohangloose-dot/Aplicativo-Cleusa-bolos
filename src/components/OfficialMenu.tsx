@@ -8,6 +8,7 @@ interface OfficialMenuProps {
   tamanhosSalgado: BoloSalgadoTamanho[];
   saboresPiscina: BoloPiscinaSabor[];
   precoPiscina: number;
+  taxaSaborEspecial?: number;
 }
 
 export default function OfficialMenu({
@@ -15,14 +16,15 @@ export default function OfficialMenu({
   tamanhos,
   tamanhosSalgado,
   saboresPiscina,
-  precoPiscina
+  precoPiscina,
+  taxaSaborEspecial = 20
 }: OfficialMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'doce' | 'salgado' | 'piscina' | 'regras'>('doce');
 
   const disponivelSabores = sabores.filter(s => s.status === 'disponivel');
-  const tradicionais = disponivelSabores.filter(s => s.precoBase <= 180.00);
-  const especiais = disponivelSabores.filter(s => s.precoBase > 180.00);
+  const tradicionais = disponivelSabores.filter(s => !s.isEspecial);
+  const especiais = disponivelSabores.filter(s => !!s.isEspecial);
 
   // We find standard base price (typically 180 or the lowest traditional filling)
   const baseCakePreco = tradicionais.length > 0 ? Math.min(...tradicionais.map(s => s.precoBase)) : 180.00;
@@ -146,7 +148,7 @@ export default function OfficialMenu({
                     {especiais.length > 0 ? (
                       <div className="space-y-1 mt-1.5">
                         {especiais.map(esp => {
-                          const adicionalUnico = esp.precoBase - baseCakePreco;
+                          const adicionalUnico = typeof esp.adicionalPreco === 'number' ? esp.adicionalPreco : taxaSaborEspecial;
                           return (
                             <p key={esp.id} className="text-[11px] text-on-surface-variant leading-relaxed font-medium">
                               • <strong>{esp.nome}</strong> (+ R$ {adicionalUnico.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})

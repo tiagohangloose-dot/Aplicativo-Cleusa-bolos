@@ -611,6 +611,7 @@ export default function App() {
                     tamanhosSalgado={tamanhosSalgado}
                     saboresPiscina={saboresPiscina}
                     precoPiscina={precoPiscina}
+                    taxaSaborEspecial={taxaSaborEspecial}
                   />
 
                   <OrderForm
