@@ -675,6 +675,14 @@ export default function App() {
                   <AgendaView
                     pedidos={pedidos}
                     sabores={sabores}
+                    tamanhos={tamanhos}
+                    tamanhosSalgado={tamanhosSalgado}
+                    saboresPiscina={saboresPiscina}
+                    precoPiscina={precoPiscina}
+                    taxaDoisRecheios={taxaDoisRecheios}
+                    taxaSaborEspecial={taxaSaborEspecial}
+                    taxaEntrega={taxaEntrega}
+                    extras={extras}
                     onUpdatePedidoStatus={handleUpdatePedidoStatus}
                     onAddPedido={handleAddManualPedido}
                     onDeletePedido={handleDeletePedido}

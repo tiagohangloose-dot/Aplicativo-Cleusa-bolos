@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Pedido, BoloSabor } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Pedido, BoloSabor, BoloTamanho, AdicionalExtra, BoloSalgadoTamanho, BoloPiscinaSabor } from '../types';
 import {
   Calendar,
   Clock,
@@ -13,12 +13,22 @@ import {
   ExternalLink,
   ChefHat,
   MessageSquare,
-  Trash2
+  Trash2,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 
 interface AgendaViewProps {
   pedidos: Pedido[];
   sabores: BoloSabor[];
+  tamanhos: BoloTamanho[];
+  tamanhosSalgado: BoloSalgadoTamanho[];
+  saboresPiscina: BoloPiscinaSabor[];
+  precoPiscina: number;
+  taxaDoisRecheios: number;
+  taxaSaborEspecial: number;
+  taxaEntrega: number;
+  extras: AdicionalExtra[];
   onUpdatePedidoStatus: (pedidoId: string, newStatus: Pedido['status']) => void;
   onAddPedido: (newPedido: Pedido) => void;
   onDeletePedido?: (pedidoId: string) => void;
@@ -66,6 +76,14 @@ function getWeekendDates(): { friday: string; saturday: string; sunday: string }
 export default function AgendaView({
   pedidos,
   sabores,
+  tamanhos,
+  tamanhosSalgado,
+  saboresPiscina,
+  precoPiscina,
+  taxaDoisRecheios,
+  taxaSaborEspecial,
+  taxaEntrega,
+  extras,
   onUpdatePedidoStatus,
   onAddPedido,
   onDeletePedido,
@@ -89,8 +107,6 @@ export default function AgendaView({
   const [showAddModal, setShowAddModal] = useState(false);
   const [addNome, setAddNome] = useState('');
   const [addWhats, setAddWhats] = useState('');
-  const [addSabor, setAddSabor] = useState(sabores[0]?.nome || '');
-  const [addTamanho, setAddTamanho] = useState('M (2kg)');
   const [addData, setAddData] = useState(() => {
     const d = new Date();
     const y = d.getFullYear();
@@ -99,9 +115,89 @@ export default function AgendaView({
     return `${y}-${m}-${day}`;
   });
   const [addHora, setAddHora] = useState('14:30');
-  const [addTotal, setAddTotal] = useState('145.00');
   const [addNotas, setAddNotas] = useState('');
   const [addFormaPagamento, setAddFormaPagamento] = useState<'pix' | 'cartao' | 'dinheiro'>('pix');
+
+  // NEW: Advanced configuration states matching App's structures
+  const [tipoBolo, setTipoBolo] = useState<'doce' | 'salgado' | 'piscina'>('doce');
+  const [quantidadeRecheios, setQuantidadeRecheios] = useState<1 | 2>(1);
+  const [recheio1Id, setRecheio1Id] = useState(() => sabores[0]?.id || '');
+  const [recheio2Id, setRecheio2Id] = useState(() => sabores[1]?.id || sabores[0]?.id || '');
+  const [massa, setMassa] = useState<'branca' | 'preta'>('branca');
+  const [tamanhoId, setTamanhoId] = useState(() => tamanhos[0]?.id || '');
+  const [tamanhoSalgadoId, setTamanhoSalgadoId] = useState(() => tamanhosSalgado[0]?.id || '');
+  const [saborPiscinaId, setSaborPiscinaId] = useState(() => saboresPiscina[0]?.id || '');
+  const [tipoEntrega, setTipoEntrega] = useState<'retirada' | 'entrega'>('retirada');
+  const [nomeRetirada, setNomeRetirada] = useState('');
+  const [cep, setCep] = useState('');
+  const [rua, setRua] = useState('');
+  const [numero, setNumero] = useState('');
+  const [complemento, setComplemento] = useState('');
+  const [bairro, setBairro] = useState('');
+  const [cidade, setCidade] = useState('');
+  const [adicionaisSelecionados, setAdicionaisSelecionados] = useState<string[]>([]);
+  const [addTotal, setAddTotal] = useState('180.00');
+
+  // Recalculate price automatically
+  useEffect(() => {
+    let price = 0;
+    
+    // Extras sum
+    const extrasPreco = adicionaisSelecionados.reduce((sum, item) => {
+      const matched = extras.find(e => e.nome === item);
+      return sum + (matched ? matched.preco : 0);
+    }, 0);
+
+    const getSaborAdicional = (sab: BoloSabor | undefined) => {
+      if (!sab) return 0;
+      if (sab.isEspecial) {
+        return typeof sab.adicionalPreco === 'number' ? sab.adicionalPreco : taxaSaborEspecial;
+      }
+      return 0;
+    };
+
+    if (tipoBolo === 'doce') {
+      const selectedTamanho = tamanhos.find(t => t.id === tamanhoId) || tamanhos[0];
+      const basePreco = 180.00 + (selectedTamanho ? selectedTamanho.adicionalPreco : 0);
+      const r1 = sabores.find(s => s.id === recheio1Id);
+      const r2 = quantidadeRecheios === 2 ? sabores.find(s => s.id === recheio2Id) : null;
+      
+      const fillingOneAdditional = getSaborAdicional(r1);
+      const fillingTwoAdditional = r2 ? getSaborAdicional(r2) : 0;
+      const doubleFillingSurcharge = quantidadeRecheios === 2 ? taxaDoisRecheios : 0;
+      
+      price = basePreco + fillingOneAdditional + fillingTwoAdditional + doubleFillingSurcharge + extrasPreco;
+    } else if (tipoBolo === 'salgado') {
+      const selectedSalgadoTamanho = tamanhosSalgado.find(t => t.id === tamanhoSalgadoId) || tamanhosSalgado[0];
+      price = (selectedSalgadoTamanho ? selectedSalgadoTamanho.preco : 160.00) + extrasPreco;
+    } else if (tipoBolo === 'piscina') {
+      price = precoPiscina + extrasPreco;
+    }
+
+    if (tipoEntrega === 'entrega') {
+      price += taxaEntrega;
+    }
+
+    setAddTotal(price.toFixed(2));
+  }, [
+    tipoBolo,
+    quantidadeRecheios,
+    recheio1Id,
+    recheio2Id,
+    tamanhoId,
+    tamanhoSalgadoId,
+    saborPiscinaId,
+    tipoEntrega,
+    adicionaisSelecionados,
+    tamanhos,
+    tamanhosSalgado,
+    sabores,
+    extras,
+    precoPiscina,
+    taxaDoisRecheios,
+    taxaSaborEspecial,
+    taxaEntrega
+  ]);
 
   // 1. Calculate stats based on active calendar segment
   // Dynamic current weekend dates
@@ -163,26 +259,72 @@ export default function AgendaView({
       return;
     }
 
+    let finalSaborNome = '';
+    let finalSaborId = 'custom';
+    let finalTamanhoLabel = '';
+    let finalTamanhoId = 'custom';
+    const extrasPreco = adicionaisSelecionados.reduce((sum, item) => {
+      const matched = extras.find(e => e.nome === item);
+      return sum + (matched ? matched.preco : 0);
+    }, 0);
+
+    if (tipoBolo === 'doce') {
+      const r1 = sabores.find(s => s.id === recheio1Id);
+      const r2 = quantidadeRecheios === 2 ? sabores.find(s => s.id === recheio2Id) : null;
+      finalSaborId = r1?.id || 'custom';
+      finalSaborNome = r2 ? `${r1?.nome || 'Personalizado'} + ${r2?.nome || 'Personalizado'}` : (r1?.nome || 'Personalizado');
+      
+      const t = tamanhos.find(sz => sz.id === tamanhoId) || tamanhos[0];
+      finalTamanhoId = t?.id || 'custom';
+      finalTamanhoLabel = t ? `${t.label} (Aprox. ${t.label.match(/\d+/) ? t.label.match(/\d+/)?.[0] : '1'}kg)` : 'Tamanho P';
+    } else if (tipoBolo === 'salgado') {
+      finalSaborId = 'salgado';
+      finalSaborNome = 'Bolo Salgado de Frango Clássico';
+      const t = tamanhosSalgado.find(sz => sz.id === tamanhoSalgadoId) || tamanhosSalgado[0];
+      finalTamanhoId = t?.id || 'custom';
+      finalTamanhoLabel = t ? `${t.label} (${t.fatias})` : 'Tamanho P';
+    } else if (tipoBolo === 'piscina') {
+      const s = saboresPiscina.find(sz => sz.id === saborPiscinaId) || saboresPiscina[0];
+      finalSaborId = s?.id || 'custom';
+      finalSaborNome = s ? `Bolo Piscina sabor ${s.nome}` : 'Bolo Piscina';
+      finalTamanhoId = 'unico';
+      finalTamanhoLabel = 'Bolo Piscina (Tamanho Único)';
+    }
+
     const uniqueCode = "CB-" + Math.floor(1000 + Math.random() * 9000);
     const newPed: Pedido = {
       id: "ord-manual-" + Date.now(),
       codigo: uniqueCode,
       clienteNome: addNome,
       whatsapp: addWhats,
-      tipoEntrega: 'retirada',
+      tipoEntrega,
+      nomeRetirada: tipoEntrega === 'retirada' ? (nomeRetirada || undefined) : undefined,
+      cep: tipoEntrega === 'entrega' ? cep : undefined,
+      rua: tipoEntrega === 'entrega' ? rua : undefined,
+      numero: tipoEntrega === 'entrega' ? numero : undefined,
+      complemento: tipoEntrega === 'entrega' ? complemento : undefined,
+      bairro: tipoEntrega === 'entrega' ? bairro : undefined,
+      cidade: tipoEntrega === 'entrega' ? cidade : undefined,
       data: addData,
       horario: addHora,
-      saborId: 'custom',
-      saborNome: addSabor,
-      tamanhoId: 'custom',
-      tamanhoLabel: addTamanho,
-      adicionais: addNotas ? [addNotas] : [],
-      adicionaisPreco: 0,
-      total: parseFloat(addTotal) || 120.00,
+      saborId: finalSaborId,
+      saborNome: finalSaborNome,
+      tamanhoId: finalTamanhoId,
+      tamanhoLabel: finalTamanhoLabel,
+      adicionais: adicionaisSelecionados,
+      adicionaisPreco: extrasPreco,
+      total: parseFloat(addTotal) || 0,
       formaPagamento: addFormaPagamento,
       status: 'pendente',
       dataCriacao: new Date().toISOString(),
-      detalhes: addNotas
+      detalhes: addNotas,
+      massa: tipoBolo === 'doce' ? massa : undefined,
+      quantidadeRecheios: tipoBolo === 'doce' ? quantidadeRecheios : undefined,
+      recheio1Id: tipoBolo === 'doce' ? recheio1Id : undefined,
+      recheio1Nome: tipoBolo === 'doce' ? (sabores.find(s => s.id === recheio1Id)?.nome) : undefined,
+      recheio2Id: (tipoBolo === 'doce' && quantidadeRecheios === 2) ? recheio2Id : undefined,
+      recheio2Nome: (tipoBolo === 'doce' && quantidadeRecheios === 2) ? (sabores.find(s => s.id === recheio2Id)?.nome) : undefined,
+      tipoBolo
     };
 
     onAddPedido(newPed);
@@ -192,6 +334,17 @@ export default function AgendaView({
     setAddNome('');
     setAddWhats('');
     setAddNotas('');
+    setNomeRetirada('');
+    setCep('');
+    setRua('');
+    setNumero('');
+    setComplemento('');
+    setBairro('');
+    setCidade('');
+    setAdicionaisSelecionados([]);
+    setTipoBolo('doce');
+    setQuantidadeRecheios(1);
+    setMassa('branca');
   };
 
   return (
@@ -596,8 +749,8 @@ export default function AgendaView({
 
       {/* MODAL 1: ORDER DETAILS & STATUS UPDATE */}
       {detailedPedido && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-surface p-6 rounded-2xl max-w-md w-full shadow-2xl border border-outline-variant/30 relative animate-in zoom-in-95 duration-200 text-on-surface">
+        <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-start md:items-center p-4 overflow-y-auto backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-surface p-6 rounded-2xl max-w-md w-full shadow-2xl border border-outline-variant/30 my-4 md:my-8 relative animate-in zoom-in-95 duration-200 text-on-surface">
             {/* Close button */}
             <button
               onClick={() => setDetailedPedidoId(null)}
@@ -775,8 +928,8 @@ export default function AgendaView({
 
       {/* MODAL 2: QUICK BOOKING ADD */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-300">
-          <div className="bg-surface p-6 rounded-2xl max-w-md w-full shadow-2xl border border-outline-variant/30 my-8 relative animate-in zoom-in-95 duration-200 text-on-surface">
+        <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-start md:items-center p-4 overflow-y-auto backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-surface p-6 rounded-2xl max-w-xl w-full shadow-2xl border border-outline-variant/30 my-4 md:my-8 relative animate-in zoom-in-95 duration-200 text-on-surface">
             {/* Close */}
             <button
               type="button"
@@ -786,135 +939,445 @@ export default function AgendaView({
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="font-serif text-xl font-bold text-secondary mb-4">
-              Agendar Nova Encomenda
+            <h3 className="font-serif text-xl font-bold text-secondary mb-4 flex items-center gap-2">
+              🎂 Agendar Nova Encomenda
             </h3>
 
             <form onSubmit={handleQuickAdd} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold mb-1 text-on-surface-variant">Nome do Cliente</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ex: Lucas Mendonça"
-                  className="w-full h-10 px-3 rounded bg-surface-container border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none"
-                  value={addNome}
-                  onChange={(e) => setAddNome(e.target.value)}
-                />
+              
+              {/* Seção 1: Cliente */}
+              <div className="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant/15 space-y-3">
+                <h4 className="text-xs font-bold text-secondary uppercase tracking-wide">Dados do Cliente</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Nome Completo</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: Lucas Mendonça"
+                      className="w-full h-10 px-3 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface"
+                      value={addNome}
+                      onChange={(e) => setAddNome(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">WhatsApp (com DDD)</label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="Ex: 11988887777"
+                      className="w-full h-10 px-3 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface"
+                      value={addWhats}
+                      onChange={(e) => setAddWhats(e.target.value)}
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold mb-1 text-on-surface-variant">WhatsApp do Cliente</label>
-                <input
-                  type="tel"
-                  required
-                  placeholder="Ex: 11988887777"
-                  className="w-full h-10 px-3 rounded bg-surface-container border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none"
-                  value={addWhats}
-                  onChange={(e) => setAddWhats(e.target.value)}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
+              {/* Seção 2: Especificações do Bolo */}
+              <div className="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant/15 space-y-3">
+                <h4 className="text-xs font-bold text-secondary uppercase tracking-wide">Especificações do Bolo</h4>
+                
+                {/* Tipo de Bolo */}
                 <div>
-                  <label className="block text-xs font-semibold mb-1 text-on-surface-variant">Sabor do Bolo</label>
-                  <select
-                    className="w-full h-10 px-2 rounded bg-surface-container border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none"
-                    value={addSabor}
-                    onChange={(e) => setAddSabor(e.target.value)}
-                  >
-                    {sabores.map((s, index) => (
-                      <option key={index} value={s.nome}>{s.nome}</option>
+                  <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Tipo de Encomenda</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'doce', label: '🎂 Doce/Festa' },
+                      { id: 'salgado', label: '🍞 Salgado' },
+                      { id: 'piscina', label: '🍩 Piscina' }
+                    ].map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => {
+                          setTipoBolo(t.id as any);
+                          // Select default recheios / sizes for new types
+                          if (t.id === 'doce') {
+                            setTamanhoId(tamanhos[0]?.id || '');
+                          } else if (t.id === 'salgado') {
+                            setTamanhoSalgadoId(tamanhosSalgado[0]?.id || '');
+                          } else {
+                            setSaborPiscinaId(saboresPiscina[0]?.id || '');
+                          }
+                        }}
+                        className={`py-2 px-1 text-center rounded text-[11px] font-bold cursor-pointer border transition-all ${
+                          tipoBolo === t.id
+                            ? 'bg-primary/10 border-primary text-primary shadow-sm'
+                            : 'bg-surface border-outline-variant/20 hover:bg-surface-container'
+                        }`}
+                      >
+                        {t.label}
+                      </button>
                     ))}
-                    <option value="Personalizado">Outro Sabor</option>
-                  </select>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-on-surface-variant">Peso / Tamanho</label>
-                  <select
-                    className="w-full h-10 px-2 rounded bg-surface-container border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none"
-                    value={addTamanho}
-                    onChange={(e) => setAddTamanho(e.target.value)}
+                {/* Conditional Fields: SWEET CAKE */}
+                {tipoBolo === 'doce' && (
+                  <div className="space-y-3 pt-1 border-t border-outline-variant/10">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Quantidade de Recheios</label>
+                        <select
+                          className="w-full h-10 px-2 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface cursor-pointer font-semibold"
+                          value={quantidadeRecheios}
+                          onChange={(e) => setQuantidadeRecheios(parseInt(e.target.value) as 1 | 2)}
+                        >
+                          <option value={1}>1 Recheio (Sabor Único)</option>
+                          <option value={2}>2 Recheios (Mesclado + R$ {taxaDoisRecheios})</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Massa do Bolo</label>
+                        <select
+                          className="w-full h-10 px-2 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface cursor-pointer font-semibold"
+                          value={massa}
+                          onChange={(e) => setMassa(e.target.value as any)}
+                        >
+                          <option value="branca">Pão de Ló Branca 🍞</option>
+                          <option value="preta">Preta (Chocolate) 🍫</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Recheio 1</label>
+                        <select
+                          className="w-full h-10 px-2 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface cursor-pointer font-semibold"
+                          value={recheio1Id}
+                          onChange={(e) => setRecheio1Id(e.target.value)}
+                        >
+                          {sabores.filter(s => s.status === 'disponivel').map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.nome} {s.isEspecial ? `★ (Especial + R$ ${s.adicionalPreco ?? taxaSaborEspecial})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {quantidadeRecheios === 2 && (
+                        <div>
+                          <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Recheio 2</label>
+                          <select
+                            className="w-full h-10 px-2 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface cursor-pointer font-semibold"
+                            value={recheio2Id}
+                            onChange={(e) => setRecheio2Id(e.target.value)}
+                          >
+                            {sabores.filter(s => s.status === 'disponivel').map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.nome} {s.isEspecial ? `★ (Especial + R$ ${s.adicionalPreco ?? taxaSaborEspecial})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Tamanho / Peso</label>
+                      <select
+                        className="w-full h-10 px-2 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface cursor-pointer font-semibold"
+                        value={tamanhoId}
+                        onChange={(e) => setTamanhoId(e.target.value)}
+                      >
+                        {tamanhos.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.label} (Aprox. {t.label.match(/\d+/) ? t.label.match(/\d+/)?.[0] : '1'}kg) - {t.fatias} fatias
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Conditional Fields: SALTY CAKE */}
+                {tipoBolo === 'salgado' && (
+                  <div className="space-y-3 pt-1 border-t border-outline-variant/10">
+                    <div className="p-2.5 bg-secondary/5 rounded-lg border border-secondary/10 text-xs">
+                      🍞 <strong>Sabor Único:</strong> Bolo Salgado de Frango Clássico (Creme de frango cremoso, batata palha, purê de batatas artesanal).
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Tamanho / Peso</label>
+                      <select
+                        className="w-full h-10 px-2 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface cursor-pointer font-semibold"
+                        value={tamanhoSalgadoId}
+                        onChange={(e) => setTamanhoSalgadoId(e.target.value)}
+                      >
+                        {tamanhosSalgado.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.label} ({t.fatias}) - R$ {t.preco.toFixed(2)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Conditional Fields: POOL CAKE */}
+                {tipoBolo === 'piscina' && (
+                  <div className="space-y-3 pt-1 border-t border-outline-variant/10">
+                    <div className="p-2.5 bg-secondary/5 rounded-lg border border-secondary/10 text-xs text-on-surface-variant">
+                      🍩 <strong>Tamanho Único:</strong> Bolo Piscina Caseiro com cobertura generosa (R$ {precoPiscina.toFixed(2)}).
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Sabor da Cobertura</label>
+                      <select
+                        className="w-full h-10 px-2 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface cursor-pointer font-semibold"
+                        value={saborPiscinaId}
+                        onChange={(e) => setSaborPiscinaId(e.target.value)}
+                      >
+                        {saboresPiscina.filter(s => s.status === 'disponivel').map((s) => (
+                          <option key={s.id} value={s.id}>{s.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Seção 3: Adicionais Extras */}
+              <div className="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant/15 space-y-3">
+                <h4 className="text-xs font-bold text-secondary uppercase tracking-wide">Itens Adicionais</h4>
+                <div className="flex flex-wrap gap-2">
+                  {extras.map((extra) => {
+                    const isSelected = adicionaisSelecionados.includes(extra.nome);
+                    return (
+                      <button
+                        key={extra.id}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setAdicionaisSelecionados(prev => prev.filter(item => item !== extra.nome));
+                          } else {
+                            setAdicionaisSelecionados(prev => [...prev, extra.nome]);
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-[11px] font-semibold cursor-pointer border flex items-center gap-1.5 transition-all ${
+                          isSelected
+                            ? 'bg-secondary text-white border-secondary shadow-sm'
+                            : 'bg-surface text-on-surface-variant border-outline-variant/30 hover:bg-surface-container-high'
+                        }`}
+                      >
+                        <span>{extra.nome} (+ R$ {extra.preco.toFixed(2)})</span>
+                        {isSelected && <Check className="w-3 h-3 text-white" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Seção 4: Retirada / Entrega */}
+              <div className="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant/15 space-y-3">
+                <h4 className="text-xs font-bold text-secondary uppercase tracking-wide">Método de Retirada ou Entrega</h4>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTipoEntrega('retirada')}
+                    className={`py-2.5 px-1 text-center rounded-xl text-xs font-bold cursor-pointer border flex items-center justify-center gap-1.5 transition-all ${
+                      tipoEntrega === 'retirada'
+                        ? 'bg-[#1b6190]/10 border-[#1b6190] text-[#1b6190] shadow-sm'
+                        : 'bg-surface border-outline-variant/20 hover:bg-surface-container'
+                    }`}
                   >
-                    <option value="P (1kg)">P (1kg)</option>
-                    <option value="M (2kg)">M (2kg)</option>
-                    <option value="G (3kg)">G (3kg)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-on-surface-variant">Data da Encomenda</label>
-                  <input
-                    type="date"
-                    required
-                    className="w-full h-10 px-2 rounded bg-surface-container border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none"
-                    value={addData}
-                    onChange={(e) => setAddData(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-on-surface-variant">Horário</label>
-                  <input
-                    type="time"
-                    required
-                    className="w-full h-10 px-2 rounded bg-surface-container border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none"
-                    value={addHora}
-                    onChange={(e) => setAddHora(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-on-surface-variant">Preço Cobrado (R$)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    className="w-full h-10 px-3 rounded bg-surface-container border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none"
-                    value={addTotal}
-                    onChange={(e) => setAddTotal(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-on-surface-variant">Forma de Pagamento</label>
-                  <select
-                    className="w-full h-10 px-2 rounded bg-surface-container border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none cursor-pointer"
-                    value={addFormaPagamento}
-                    onChange={(e) => setAddFormaPagamento(e.target.value as any)}
+                    🏪 Retirada na Loja
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTipoEntrega('entrega')}
+                    className={`py-2.5 px-1 text-center rounded-xl text-xs font-bold cursor-pointer border flex items-center justify-center gap-1.5 transition-all ${
+                      tipoEntrega === 'entrega'
+                        ? 'bg-purple-100/45 border-purple-500 text-purple-800 shadow-sm'
+                        : 'bg-surface border-outline-variant/20 hover:bg-surface-container'
+                    }`}
                   >
-                    <option value="pix">Pix</option>
-                    <option value="cartao">Cartão</option>
-                    <option value="dinheiro">Dinheiro</option>
-                  </select>
+                    🚚 Entrega (+ R$ {taxaEntrega.toFixed(2)})
+                  </button>
+                </div>
+
+                {/* Conditional Address/Retirada fields */}
+                {tipoEntrega === 'retirada' ? (
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Quem vai retirar? (Opcional)</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: O próprio cliente, marido, etc."
+                      className="w-full h-10 px-3 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface"
+                      value={nomeRetirada}
+                      onChange={(e) => setNomeRetirada(e.target.value)}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-3 pt-1 border-t border-outline-variant/10">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-1">
+                        <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">CEP</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="12200-000"
+                          className="w-full h-10 px-2 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface"
+                          value={cep}
+                          onChange={(e) => setCep(e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Rua/Avenida</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Nome da rua"
+                          className="w-full h-10 px-3 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface"
+                          value={rua}
+                          onChange={(e) => setRua(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Número</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="123"
+                          className="w-full h-10 px-2 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface"
+                          value={numero}
+                          onChange={(e) => setNumero(e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Complemento (Opcional)</label>
+                        <input
+                          type="text"
+                          placeholder="Apto 45, Bloco B"
+                          className="w-full h-10 px-3 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface"
+                          value={complemento}
+                          onChange={(e) => setComplemento(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Bairro</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ex: Jd. Satélite"
+                          className="w-full h-10 px-2 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface"
+                          value={bairro}
+                          onChange={(e) => setBairro(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Cidade</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="São José dos Campos"
+                          className="w-full h-10 px-2 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface"
+                          value={cidade}
+                          onChange={(e) => setCidade(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Seção 5: Agendamento e Pagamento */}
+              <div className="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant/15 space-y-3">
+                <h4 className="text-xs font-bold text-secondary uppercase tracking-wide">Agendamento e Pagamento</h4>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Data da Entrega</label>
+                    <input
+                      type="date"
+                      required
+                      className="w-full h-10 px-2 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface font-semibold"
+                      value={addData}
+                      onChange={(e) => setAddData(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Horário Limite</label>
+                    <input
+                      type="time"
+                      required
+                      className="w-full h-10 px-2 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface font-semibold"
+                      value={addHora}
+                      onChange={(e) => setAddHora(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant">Forma de Pagamento</label>
+                    <select
+                      className="w-full h-10 px-2 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface cursor-pointer font-semibold"
+                      value={addFormaPagamento}
+                      onChange={(e) => setAddFormaPagamento(e.target.value as any)}
+                    >
+                      <option value="pix">Pix (Sinal de 30% Recomendado)</option>
+                      <option value="cartao">Cartão de Crédito/Débito</option>
+                      <option value="dinheiro">Dinheiro físico</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold mb-1 text-on-surface-variant flex justify-between">
+                      <span>Valor Total Cobrado (R$)</span>
+                      <span className="text-[10px] text-primary font-bold">(Auto-calculado)</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      className="w-full h-10 px-3 rounded bg-surface border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none text-on-surface font-bold text-tertiary"
+                      value={addTotal}
+                      onChange={(e) => setAddTotal(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-primary/5 p-2.5 rounded-lg text-[11px] text-secondary flex items-start gap-1.5 border border-primary/10">
+                  <Info className="w-3.5 h-3.5 mt-0.5 text-primary shrink-0" />
+                  <p>
+                    Recomende um sinal de <strong>R$ {(parseFloat(addTotal) * 0.3).toFixed(2)} (30%)</strong> para confirmar este agendamento.
+                  </p>
                 </div>
               </div>
 
+              {/* Seção 6: Detalhes/Notas */}
               <div>
-                <label className="block text-xs font-semibold mb-1 text-on-surface-variant">Notas Adicionais / Velas</label>
+                <label className="block text-xs font-semibold mb-1 text-on-surface-variant">Notas do Pedido / Velas / Observações</label>
                 <textarea
-                  className="w-full p-2.5 rounded bg-surface-container border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none h-12"
-                  placeholder="Ex: Escrever parabéns, retirar ovo"
+                  className="w-full p-2.5 rounded bg-surface-container border border-outline-variant/35 text-xs focus:ring-1 focus:ring-primary outline-none h-16 text-on-surface"
+                  placeholder="Ex: Escrever 'Parabéns Maria', vela de 40 anos inclusa, retirar cerejas do topo, etc."
                   value={addNotas}
                   onChange={(e) => setAddNotas(e.target.value)}
                 />
               </div>
 
-              <div className="flex gap-2 pt-2">
+              {/* BOTOES */}
+              <div className="flex gap-2 pt-2 border-t border-outline-variant/10">
                 <button
                   type="submit"
-                  className="flex-1 py-3 bg-secondary text-white font-semibold rounded text-xs shadow hover:bg-secondary/90 transition-all cursor-pointer"
+                  className="flex-1 py-3.5 bg-secondary text-white font-bold rounded-xl text-xs shadow hover:bg-secondary/95 transition-all cursor-pointer hover:shadow-md"
                 >
-                  Agendar Pedido
+                  Confirmar e Agendar Pedido
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-5 py-3 bg-surface-container-high text-on-surface rounded text-xs hover:bg-surface-container-highest transition-all cursor-pointer"
+                  className="px-5 py-3.5 bg-surface-container-high text-on-surface rounded-xl text-xs hover:bg-surface-container-highest transition-all cursor-pointer font-semibold"
                 >
                   Cancelar
                 </button>
